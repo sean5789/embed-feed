@@ -48,12 +48,16 @@ async function generateStaticFeed() {
             playsinline 
             preload="auto"
             onloadeddata="this.classList.add('loaded')"
+            onclick="
+              document.querySelectorAll('video').forEach(v => v.muted = true);
+              document.querySelectorAll('.mute-toggle').forEach(b => b.style.display = 'block');
+              this.muted = false;
+              this.nextElementSibling.style.display = 'none';
+            "
           ></video>
           <button class="mute-toggle" onclick="
-            const allVideos = document.querySelectorAll('video');
-            const allBtns = document.querySelectorAll('.mute-toggle');
-            allVideos.forEach(v => v.muted = true);
-            allBtns.forEach(b => b.style.display = 'block');
+            document.querySelectorAll('video').forEach(v => v.muted = true);
+            document.querySelectorAll('.mute-toggle').forEach(b => b.style.display = 'block');
             const v = this.previousElementSibling;
             v.muted = false;
             this.style.display = 'none';
