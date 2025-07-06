@@ -15,8 +15,7 @@ const locationFromUsername = (username) => {
 
 async function generateStaticFeed() {
   try {
-    console.log('📡 Connexion à l’API EmbedSocial...');
-
+    console.log("📡 Connexion à l’API EmbedSocial...");
     const res = await axios.get(
       `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${ALBUM_REF}`,
       {
@@ -29,11 +28,41 @@ async function generateStaticFeed() {
 
     const posts = res.data.data || [];
     if (!Array.isArray(posts)) {
-      console.error("❌ Format inattendu pour les posts");
+      console.error("❌ Format inattendu");
       return;
     }
 
-    console.log(`✅ ${posts.length} publications récupérées.`);
+    console.log(`✅ ${posts.length} posts récupérés`);
+
+    const cardsHtml = posts.map(p => {
+      const date = new Date(p.created_on).toLocaleDateString('fr-FR');
+      const location = locationFromUsername(p.username);
+
+      const media = p.video?.source
+        ? `
+          <video 
+            src="${p.video.source}" 
+            autoplay 
+            muted 
+            loop 
+            playsinline 
+            preload="auto"
+            onloadeddata="this.classList.add('loaded')"
+          ></video>
+          <div class="unmute-overlay" onclick="const v=this.previousElementSibling; v.muted=false; this.style.display='none';">🔊</div>
+        `
+        : `<img src="${p.image || p.thumbnail || ''}" alt="post">`;
+
+      return `
+        <div class="card">
+          ${media}
+          <div class="info">
+            <div class="emoji">🥳</div>
+            <div class="date">${date} • NEW ! 🌍</div>
+            <div class="tag">${location}</div>
+          </div>
+        </div>`;
+    }).join('\n');
 
     const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -42,18 +71,31 @@ async function generateStaticFeed() {
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
+  <link rel="preconnect" href="https://embedsocial.com">
+  <link rel="dns-prefetch" href="https://embedsocial.com">
   <style>
-    * { margin: 0; box-sizing: border-box; }
-    body {
-      font-family: sans-serif;
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
       background: #fff;
-      padding: 1em;
+      font-family: sans-serif;
     }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 15px;
+      padding: 1em;
+      overflow: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
     }
+
+    .grid::-webkit-scrollbar {
+      display: none;
+    }
+
     .card {
       border-radius: 12px;
       overflow: hidden;
@@ -61,23 +103,23 @@ async function generateStaticFeed() {
       background: white;
       position: relative;
     }
+
     .card video {
       width: 100%;
       display: block;
       opacity: 0;
-      transition: opacity 0.6s ease-in-out;
+      transition: opacity 0.8s ease-in-out;
     }
+
     .card video.loaded {
       opacity: 1;
     }
-    .card img.fallback {
+
+    .card img {
       width: 100%;
       display: block;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
     }
+
     .unmute-overlay {
       position: absolute;
       top: 50%;
@@ -92,18 +134,21 @@ async function generateStaticFeed() {
       z-index: 3;
       transition: opacity 0.3s ease;
     }
+
     .info {
       padding: 10px;
       text-align: center;
-      background: white;
     }
+
     .emoji {
       font-size: 24px;
     }
+
     .date {
       font-size: 14px;
       color: #444;
     }
+
     .tag {
       margin-top: 6px;
       background: yellow;
@@ -116,31 +161,11 @@ async function generateStaticFeed() {
 </head>
 <body>
   <div class="grid">
-    ${posts.map(p => `
-      <div class="card">
-        <img src="${p.thumbnail || p.image || ''}" class="fallback" alt="fallback">
-        <video 
-          src="${p.video?.source || ''}" 
-          autoplay 
-          muted 
-          loop 
-          playsinline 
-          preload="auto"
-          onloadeddata="this.classList.add('loaded')"
-          onerror="this.style.display='none';"
-        ></video>
-        <div class="unmute-overlay" onclick="const v=this.previousElementSibling; v.muted=false; this.style.display='none';">🔊</div>
-        <div class="info">
-          <div class="emoji">🥳</div>
-          <div class="date">${new Date(p.created_on).toLocaleDateString('fr-FR')} • NEW ! 🌍</div>
-          <div class="tag">${locationFromUsername(p.username)}</div>
-        </div>
-      </div>
-    `).join('\n')}
+    ${cardsHtml}
   </div>
 
   <script>
-    // Fade-in vidéo
+    // Fade-in vidéos
     document.addEventListener("DOMContentLoaded", function () {
       const videos = document.querySelectorAll("video");
       videos.forEach(video => {
@@ -150,11 +175,12 @@ async function generateStaticFeed() {
       });
     });
 
-    // Ajuste la hauteur de l'iframe dans Bubble
+    // Ajustement hauteur pour iframe Bubble
     function sendHeight() {
       const height = document.body.scrollHeight;
       parent.postMessage({ type: "adjustHeight", height }, "*");
     }
+
     window.addEventListener("load", sendHeight);
     window.addEventListener("resize", sendHeight);
     new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
@@ -170,4 +196,3 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
