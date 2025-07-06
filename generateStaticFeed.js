@@ -5,14 +5,6 @@ const axios = require('axios');
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
 
-const locationFromUsername = (username) => {
-  if (!username) return "Autre 📍";
-  const u = username.toLowerCase();
-  if (u.includes("paris")) return "Paris !! 🇫🇷🤣🔥➡️";
-  if (u.includes("ibiza")) return "Ibiza !! 🇪🇸🤣🔥➡️";
-  return "Autre 📍➡️";
-};
-
 async function generateStaticFeed() {
   try {
     console.log("📡 Connexion à l’API EmbedSocial...");
@@ -36,33 +28,11 @@ async function generateStaticFeed() {
 
     const cardsHtml = posts.map(p => {
       const date = new Date(p.created_on).toLocaleDateString('fr-FR');
-      const location = locationFromUsername(p.username);
-
       const media = p.video?.source
-        ? `
-          <video 
-            src="${p.video.source}" 
-            autoplay 
-            muted 
-            loop 
-            playsinline 
-            preload="auto"
-            onloadeddata="this.classList.add('loaded')"
-            onclick="
-              document.querySelectorAll('video').forEach(v => v.muted = true);
-              document.querySelectorAll('.mute-toggle').forEach(b => b.style.display = 'block');
-              this.muted = false;
-              this.nextElementSibling.style.display = 'none';
-            "
-          ></video>
-          <button class="mute-toggle" onclick="
-            document.querySelectorAll('video').forEach(v => v.muted = true);
-            document.querySelectorAll('.mute-toggle').forEach(b => b.style.display = 'block');
-            const v = this.previousElementSibling;
-            v.muted = false;
-            this.style.display = 'none';
-          ">🔇</button>
-        `
+        ? `<div class="video-wrapper">
+             <video src="${p.video.source}" autoplay muted loop playsinline preload="auto"></video>
+             <button class="sound-btn" title="Activer le son">🔊</button>
+           </div>`
         : `<img src="${p.image || p.thumbnail || ''}" alt="post">`;
 
       return `
@@ -71,7 +41,7 @@ async function generateStaticFeed() {
           <div class="info">
             <div class="emoji">🥳</div>
             <div class="date">${date} • NEW ! 🌍</div>
-            <div class="tag">${location}</div>
+            <div class="tag">🥳➡️</div>
           </div>
         </div>`;
     }).join('\n');
@@ -113,37 +83,46 @@ async function generateStaticFeed() {
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       background: white;
+    }
+
+    .video-wrapper {
       position: relative;
     }
 
-    .card video {
+    .video-wrapper video {
       width: 100%;
       display: block;
       opacity: 0;
       transition: opacity 0.8s ease-in-out;
     }
 
-    .card video.loaded {
+    .video-wrapper video.loaded {
       opacity: 1;
+    }
+
+    .sound-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      font-size: 24px;
+      border: none;
+      border-radius: 50%;
+      padding: 10px;
+      cursor: pointer;
+      transition: opacity 0.3s ease;
+    }
+
+    .sound-btn.hidden {
+      opacity: 0;
+      pointer-events: none;
     }
 
     .card img {
       width: 100%;
       display: block;
-    }
-
-    .mute-toggle {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: transparent;
-      border: none;
-      font-size: 26px;
-      color: white;
-      text-shadow: 0 0 5px black;
-      cursor: pointer;
-      z-index: 3;
     }
 
     .info {
@@ -176,7 +155,7 @@ async function generateStaticFeed() {
   </div>
 
   <script>
-    // Fade-in vidéos
+    // Fade-in
     document.addEventListener("DOMContentLoaded", function () {
       const videos = document.querySelectorAll("video");
       videos.forEach(video => {
@@ -186,12 +165,55 @@ async function generateStaticFeed() {
       });
     });
 
-    // Ajustement hauteur iframe Bubble
+    // Son exclusif
+    document.addEventListener("click", function (e) {
+      const videoWrapper = e.target.closest(".video-wrapper");
+      if (!videoWrapper) return;
+
+      const video = videoWrapper.querySelector("video");
+      const btn = videoWrapper.querySelector(".sound-btn");
+
+      if (video && btn) {
+        const allVideos = document.querySelectorAll("video");
+        allVideos.forEach(v => {
+          if (v !== video) {
+            v.muted = true;
+            const b = v.closest(".video-wrapper")?.querySelector(".sound-btn");
+            if (b) b.classList.remove("hidden");
+          }
+        });
+
+        video.muted = false;
+        btn.classList.add("hidden");
+      }
+    });
+
+    // Bouton clique seul (optionnel)
+    document.querySelectorAll(".sound-btn").forEach(btn => {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation(); // empêche le double déclenchement
+        const video = this.closest(".video-wrapper").querySelector("video");
+        if (video) {
+          const allVideos = document.querySelectorAll("video");
+          allVideos.forEach(v => {
+            if (v !== video) {
+              v.muted = true;
+              const b = v.closest(".video-wrapper")?.querySelector(".sound-btn");
+              if (b) b.classList.remove("hidden");
+            }
+          });
+
+          video.muted = false;
+          this.classList.add("hidden");
+        }
+      });
+    });
+
+    // Iframe height for Bubble
     function sendHeight() {
       const height = document.body.scrollHeight;
       parent.postMessage({ type: "adjustHeight", height }, "*");
     }
-
     window.addEventListener("load", sendHeight);
     window.addEventListener("resize", sendHeight);
     new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
@@ -207,3 +229,4 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
