@@ -27,20 +27,18 @@ async function generateStaticFeed() {
     );
 
     const posts = res.data.data || [];
-
     if (!Array.isArray(posts)) {
       console.error("❌ Format inattendu");
       return;
     }
 
     console.log(`✅ ${posts.length} posts récupérés`);
-    console.log("🔎 Exemple :", posts[0]);
 
     const cardsHtml = posts.map(p => {
       const date = new Date(p.created_on).toLocaleDateString('fr-FR');
       const location = locationFromUsername(p.username);
       const media = p.video?.source
-        ? `<video src="${p.video.source}" controls muted autoplay loop></video>`
+        ? `<video src="${p.video.source}" autoplay muted loop playsinline preload="auto"></video>`
         : `<img src="${p.image || p.thumbnail || ''}" alt="post">`;
 
       return `
@@ -63,7 +61,6 @@ async function generateStaticFeed() {
   <meta name="referrer" content="no-referrer">
   <link rel="preconnect" href="https://embedsocial.com">
   <link rel="dns-prefetch" href="https://embedsocial.com">
-  <link rel="preload" href="https://embedsocial.com/cdn/ht.js" as="script">
   <style>
     html, body {
       margin: 0;
@@ -71,12 +68,6 @@ async function generateStaticFeed() {
       width: 100%;
       background: #fff;
       font-family: sans-serif;
-      overflow-x: hidden;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-    body::-webkit-scrollbar {
-      display: none;
     }
 
     .grid {
@@ -84,6 +75,13 @@ async function generateStaticFeed() {
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 15px;
       padding: 1em;
+      overflow: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .grid::-webkit-scrollbar {
+      display: none;
     }
 
     .card {
@@ -93,7 +91,18 @@ async function generateStaticFeed() {
       background: white;
     }
 
-    .card img, .card video {
+    .card video {
+      width: 100%;
+      display: block;
+      opacity: 0;
+      transition: opacity 0.8s ease-in-out;
+    }
+
+    .card video.loaded {
+      opacity: 1;
+    }
+
+    .card img {
       width: 100%;
       display: block;
     }
@@ -123,12 +132,23 @@ async function generateStaticFeed() {
   </style>
 </head>
 <body>
-  <h2 style="padding-left: 1em;">🎉 Derniers posts</h2>
+  <h2 style="padding: 1em;">🎉 Derniers posts</h2>
   <div class="grid">
     ${cardsHtml}
   </div>
 
   <script>
+    // Effet fade-in sur vidéo
+    document.addEventListener("DOMContentLoaded", function () {
+      const videos = document.querySelectorAll("video");
+      videos.forEach(video => {
+        video.addEventListener("loadeddata", () => {
+          video.classList.add("loaded");
+        });
+      });
+    });
+
+    // Ajustement hauteur iframe (pour Bubble)
     function sendHeight() {
       const height = document.body.scrollHeight;
       parent.postMessage({ type: "adjustHeight", height }, "*");
@@ -136,9 +156,7 @@ async function generateStaticFeed() {
 
     window.addEventListener("load", sendHeight);
     window.addEventListener("resize", sendHeight);
-
-    const observer = new MutationObserver(sendHeight);
-    observer.observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
   </script>
 </body>
 </html>`;
@@ -151,4 +169,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
