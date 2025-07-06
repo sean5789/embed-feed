@@ -49,7 +49,7 @@ async function generateStaticFeed() {
             preload="auto"
             onloadeddata="this.classList.add('loaded')"
           ></video>
-          <div class="unmute-overlay" onclick="const v=this.previousElementSibling; v.muted=false; this.style.display='none';">🔊</div>
+          <button class="mute-toggle" onclick="const v=this.previousElementSibling; v.muted=false; this.style.display='none';" aria-label="Activer le son">🔇</button>
         `
         : `<img src="${p.image || p.thumbnail || ''}" alt="post">`;
 
@@ -120,19 +120,18 @@ async function generateStaticFeed() {
       display: block;
     }
 
-    .unmute-overlay {
+    .mute-toggle {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.6);
+      background: transparent;
+      border: none;
+      font-size: 26px;
       color: white;
-      font-size: 20px;
-      padding: 12px 16px;
-      border-radius: 30px;
+      text-shadow: 0 0 5px black;
       cursor: pointer;
       z-index: 3;
-      transition: opacity 0.3s ease;
     }
 
     .info {
@@ -175,7 +174,7 @@ async function generateStaticFeed() {
       });
     });
 
-    // Ajustement hauteur pour iframe Bubble
+    // Ajustement hauteur iframe Bubble
     function sendHeight() {
       const height = document.body.scrollHeight;
       parent.postMessage({ type: "adjustHeight", height }, "*");
