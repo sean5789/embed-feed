@@ -49,7 +49,15 @@ async function generateStaticFeed() {
             preload="auto"
             onloadeddata="this.classList.add('loaded')"
           ></video>
-          <button class="mute-toggle" onclick="const v=this.previousElementSibling; v.muted=false; this.style.display='none';" aria-label="Activer le son">🔇</button>
+          <button class="mute-toggle" onclick="
+            const allVideos = document.querySelectorAll('video');
+            const allBtns = document.querySelectorAll('.mute-toggle');
+            allVideos.forEach(v => v.muted = true);
+            allBtns.forEach(b => b.style.display = 'block');
+            const v = this.previousElementSibling;
+            v.muted = false;
+            this.style.display = 'none';
+          ">🔇</button>
         `
         : `<img src="${p.image || p.thumbnail || ''}" alt="post">`;
 
