@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
@@ -54,8 +53,6 @@ async function generateStaticFeed() {
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <link rel="preconnect" href="https://embedsocial.com">
-  <link rel="dns-prefetch" href="https://embedsocial.com">
   <style>
     html, body {
       margin: 0;
@@ -77,34 +74,32 @@ async function generateStaticFeed() {
       overflow-x: auto;
       gap: 15px;
       padding: 0 10px;
-      scroll-behavior: smooth;
+      scroll-snap-type: x mandatory;
       box-sizing: border-box;
-      margin-bottom: 0;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .grid::-webkit-scrollbar {
-      display: none;
     }
 
     .card {
       flex: 0 0 auto;
       width: 240px;
+      height: 440px;
       scroll-snap-align: start;
       background: white;
       border-radius: 16px;
       overflow: hidden;
-      margin: 0;
-      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
     .video-wrapper {
+      flex: 1;
       position: relative;
     }
 
     video {
       width: 100%;
+      height: 100%;
+      object-fit: cover;
       display: block;
       opacity: 0;
       transition: opacity 0.8s ease-in-out;
@@ -139,7 +134,6 @@ async function generateStaticFeed() {
     .info {
       padding: 6px 10px 2px;
       text-align: center;
-      margin-bottom: 0;
     }
 
     .emoji {
@@ -194,20 +188,11 @@ async function generateStaticFeed() {
         activeVideo.muted = !activeVideo.muted;
         activeBtn.classList.toggle("hidden", !activeVideo.muted);
       }
-
-      function sendHeight() {
-        const height = document.body.scrollHeight;
-        parent.postMessage({ type: "adjustHeight", height }, "*");
-      }
-
-      window.addEventListener("load", sendHeight);
-      window.addEventListener("resize", sendHeight);
-      new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
     });
   </script>
 </body>
 </html>`;
-
+    
     fs.writeFileSync('index.html', html);
     console.log("✅ index.html généré avec succès.");
   } catch (error) {
