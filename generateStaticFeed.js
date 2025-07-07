@@ -77,7 +77,7 @@ async function generateStaticFeed() {
 }
 
     .card {
-      border-radius: 12px;
+      border-radius: 0px;
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       background: white;
@@ -194,6 +194,3 @@ async function generateStaticFeed() {
     console.error("❌ Erreur :", error.message);
   }
 }
-
-generateStaticFeed();
-
