@@ -60,27 +60,22 @@ async function generateStaticFeed() {
       margin: 0;
       padding: 0;
       width: 100%;
-      height: 100%;
       background: #fff;
       font-family: sans-serif;
-      overflow-y: auto;
     }
 
     .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  padding: Opx; /* ✅ réduit à Opx */
-  overflow: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      padding: 0px;
+      overflow: visible;
+    }
 
     .card {
-      border-radius: 0px;
       overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       background: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
 
     .video-wrapper {
@@ -184,6 +179,16 @@ async function generateStaticFeed() {
         }
       }
     });
+
+    // Hauteur dynamique Bubble
+    function sendHeight() {
+      const height = document.body.scrollHeight;
+      parent.postMessage({ type: "adjustHeight", height }, "*");
+    }
+
+    window.addEventListener("load", sendHeight);
+    window.addEventListener("resize", sendHeight);
+    new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
   </script>
 </body>
 </html>`;
