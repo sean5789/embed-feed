@@ -67,11 +67,14 @@ async function generateStaticFeed() {
     }
 
     .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 0px;
-      padding: 1em;
-    }
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  padding: 1px; /* ✅ réduit à 1px */
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 
     .card {
       border-radius: 0px;
