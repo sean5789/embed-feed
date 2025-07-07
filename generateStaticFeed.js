@@ -104,7 +104,7 @@ async function generateStaticFeed() {
       position: absolute;
       bottom: 10px;
       right: 10px;
-      width: 36px;
+      width: 26px;
       height: 36px;
       background: rgba(0, 0, 0, 0.6);
       border: none;
@@ -113,7 +113,7 @@ async function generateStaticFeed() {
       background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16.5 12c0-.8-.3-1.5-.8-2l1.5-1.5c.8.8 1.3 1.9 1.3 3.1s-.5 2.3-1.3 3.1l-1.5-1.5c.5-.5.8-1.2.8-2zm2.5 0c0 1.5-.6 2.8-1.6 3.8l1.5 1.5C20.1 15.9 21 14 21 12s-.9-3.9-2.4-5.3l-1.5 1.5c1 .9 1.6 2.2 1.6 3.8zM4 9v6h4l5 5V4L5 9H4zm16.5 12.1L3.9 4.5 2.5 5.9 7.6 11H4v2h4l5 5v-4.6l5.1 5.1 1.4-1.4z"/></svg>');
       background-repeat: no-repeat;
       background-position: center;
-      background-size: 60%;
+      background-size: 50%;
       transition: opacity 0.3s ease;
     }
 
