@@ -19,17 +19,14 @@
     }
 
     .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  padding: 0px; /* ✅ réduit à 0px */
-  overflow: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0px;
+      padding: 1em;
+    }
 
     .card {
-      border-radius: 12px;
+      border-radius: 0px;
       overflow: hidden;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       background: white;

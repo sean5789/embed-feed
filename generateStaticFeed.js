@@ -67,14 +67,11 @@ async function generateStaticFeed() {
     }
 
     .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  padding: 0px; /* ✅ réduit à 0px */
-  overflow: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0px;
+      padding: 1em;
+    }
 
     .card {
       border-radius: 0px;
@@ -194,3 +191,5 @@ async function generateStaticFeed() {
     console.error("❌ Erreur :", error.message);
   }
 }
+
+generateStaticFeed();
