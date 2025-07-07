@@ -40,7 +40,7 @@ async function generateStaticFeed() {
           ${media}
           <div class="info">
             <div class="emoji">\ud83e\udd73</div>
-            <div class="date">${date} • NEW ! \ud83c\udf0d</div>
+            <div class="date">${date} • #NEW ! \ud83c\udf0d</div>
             <div class="tag">\ud83e\udd73\u27a1\ufe0f</div>
           </div>
         </div>`;
