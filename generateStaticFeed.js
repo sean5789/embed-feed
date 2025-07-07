@@ -81,7 +81,6 @@ async function generateStaticFeed() {
     .card {
       flex: 0 0 auto;
       width: 240px;
-      height: 440px;
       scroll-snap-align: start;
       background: white;
       border-radius: 16px;
@@ -92,7 +91,6 @@ async function generateStaticFeed() {
     }
 
     .video-wrapper {
-      flex: 1;
       position: relative;
     }
 
