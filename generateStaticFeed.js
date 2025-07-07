@@ -180,14 +180,6 @@ async function generateStaticFeed() {
         activeBtn.classList.toggle("hidden", !activeVideo.muted);
       }
 
-      function sendHeight() {
-        const height = document.body.scrollHeight;
-        parent.postMessage({ type: "adjustHeight", height }, "*");
-      }
-
-      window.addEventListener("load", sendHeight);
-      window.addEventListener("resize", sendHeight);
-      new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
     });
   </script>
 </body>
