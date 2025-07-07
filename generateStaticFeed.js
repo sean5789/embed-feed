@@ -92,12 +92,12 @@ async function generateStaticFeed() {
 
     video {
       width: 100%;
-      height: calc(100vh - 30px);
+      height: calc(100vh - 120px);
       object-fit: cover;
       display: block;
       opacity: 0;
       transition: opacity 0.8s ease-in-out;
-      border-radius: 0;
+      border-radius: 16px;
     }
 
     video.loaded {
