@@ -61,8 +61,10 @@ async function generateStaticFeed() {
       margin: 0;
       padding: 0;
       width: 100%;
+      height: 100%;
       background: #fff;
       font-family: sans-serif;
+      overflow-y: auto;
     }
 
     .grid {
@@ -70,13 +72,6 @@ async function generateStaticFeed() {
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 15px;
       padding: 1em;
-      overflow: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .grid::-webkit-scrollbar {
-      display: none;
     }
 
     .card {
@@ -187,15 +182,6 @@ async function generateStaticFeed() {
         }
       }
     });
-
-    function sendHeight() {
-      const height = document.body.scrollHeight;
-      parent.postMessage({ type: "adjustHeight", height }, "*");
-    }
-
-    window.addEventListener("load", sendHeight);
-    window.addEventListener("resize", sendHeight);
-    new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
   </script>
 </body>
 </html>`;
