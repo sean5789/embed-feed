@@ -76,15 +76,18 @@ async function generateStaticFeed() {
       overflow-x: auto;
       gap: 15px;
       padding: 0 10px;
-      scroll-snap-type: x mandatory;
       box-sizing: border-box;
       margin-bottom: 0 !important;
+
+      /* ✅ Changement ici */
+      scroll-snap-type: none;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
     }
 
     .card {
       flex: 0 0 auto;
       width: 240px;
-      scroll-snap-align: start;
       background: white;
       border-radius: 16px;
       overflow: hidden;
