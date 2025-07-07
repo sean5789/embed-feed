@@ -7,6 +7,7 @@ const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
 
 async function generateStaticFeed() {
   try {
+    console.log("📱 Connexion à l’API EmbedSocial...");
     const res = await axios.get(
       `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${ALBUM_REF}`,
       {
@@ -18,7 +19,12 @@ async function generateStaticFeed() {
     );
 
     const posts = res.data.data || [];
-    if (!Array.isArray(posts)) return;
+    if (!Array.isArray(posts)) {
+      console.error("❌ Format inattendu");
+      return;
+    }
+
+    console.log(`✅ ${posts.length} posts récupérés`);
 
     const cardsHtml = posts.map(p => {
       const date = new Date(p.created_on).toLocaleDateString('fr-FR');
@@ -44,43 +50,50 @@ async function generateStaticFeed() {
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Feed</title>
+  <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <style>
     html, body {
       margin: 0;
       padding: 0;
+      height: 100%;
       background: #fff;
       font-family: sans-serif;
       overflow: hidden;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    body::-webkit-scrollbar {
+      display: none;
     }
 
     .grid {
       display: flex;
       overflow-x: auto;
-      gap: 16px;
+      gap: 15px;
       padding: 0 10px;
       scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .grid::-webkit-scrollbar {
-      display: none;
+      box-sizing: border-box;
     }
 
     .card {
       flex: 0 0 auto;
       width: 240px;
-      height: 420px; /* ✅ hauteur fixe ici */
+      height: 440px;
       scroll-snap-align: start;
       background: white;
       border-radius: 16px;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
     .video-wrapper {
+      flex: 1;
       position: relative;
-      height: 300px;
     }
 
     video {
@@ -88,6 +101,12 @@ async function generateStaticFeed() {
       height: 100%;
       object-fit: cover;
       display: block;
+      opacity: 0;
+      transition: opacity 0.8s ease-in-out;
+    }
+
+    video.loaded {
+      opacity: 1;
     }
 
     .sound-btn {
@@ -100,10 +119,11 @@ async function generateStaticFeed() {
       border: none;
       border-radius: 50%;
       cursor: pointer;
-      background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M16.5 12c0-.8-.3-1.5-.8-2l1.5-1.5c.8.8 1.3 1.9 1.3 3.1s-.5 2.3-1.3 3.1l-1.5-1.5c.5-.5.8-1.2.8-2zm2.5 0c0 1.5-.6 2.8-1.6 3.8l1.5 1.5C20.1 15.9 21 14 21 12s-.9-3.9-2.4-5.3l-1.5 1.5c1 .9 1.6 2.2 1.6 3.8zM4 9v6h4l5 5V4L5 9H4zm16.5 12.1L3.9 4.5 2.5 5.9 7.6 11H4v2h4l5 5v-4.6l5.1 5.1 1.4-1.4z"/></svg>');
+      background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16.5 12c0-.8-.3-1.5-.8-2l1.5-1.5c.8.8 1.3 1.9 1.3 3.1s-.5 2.3-1.3 3.1l-1.5-1.5c.5-.5.8-1.2.8-2zm2.5 0c0 1.5-.6 2.8-1.6 3.8l1.5 1.5C20.1 15.9 21 14 21 12s-.9-3.9-2.4-5.3l-1.5 1.5c1 .9 1.6 2.2 1.6 3.8zM4 9v6h4l5 5V4L5 9H4zm16.5 12.1L3.9 4.5 2.5 5.9 7.6 11H4v2h4l5 5v-4.6l5.1 5.1 1.4-1.4z"/></svg>');
       background-repeat: no-repeat;
       background-position: center;
       background-size: 60%;
+      transition: opacity 0.3s ease;
     }
 
     .sound-btn.hidden {
@@ -112,7 +132,7 @@ async function generateStaticFeed() {
     }
 
     .info {
-      padding: 6px 10px 4px;
+      padding: 6px 10px 2px;
       text-align: center;
     }
 
@@ -122,13 +142,14 @@ async function generateStaticFeed() {
 
     .date {
       font-size: 14px;
+      color: #444;
     }
 
     .tag {
-      margin-top: 4px;
+      margin-top: 6px;
       background: yellow;
       font-weight: bold;
-      padding: 4px 8px;
+      padding: 6px;
       border-radius: 6px;
       display: inline-block;
     }
@@ -140,11 +161,15 @@ async function generateStaticFeed() {
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", function () {
       const videos = document.querySelectorAll("video");
       const buttons = document.querySelectorAll(".sound-btn");
 
       videos.forEach((video, i) => {
+        video.addEventListener("loadeddata", () => {
+          video.classList.add("loaded");
+        });
+
         video.addEventListener("click", () => toggleSound(video, buttons[i]));
         buttons[i].addEventListener("click", e => {
           e.stopPropagation();
@@ -167,7 +192,7 @@ async function generateStaticFeed() {
   </script>
 </body>
 </html>`;
-
+    
     fs.writeFileSync('index.html', html);
     console.log("✅ index.html généré avec succès.");
   } catch (error) {
