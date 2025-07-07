@@ -103,7 +103,7 @@ async function generateStaticFeed() {
     .sound-btn {
       position: absolute;
       bottom: 10px;
-      right: 10px;
+      right: 5px;
       width: 26px;
       height: 36px;
       background: rgba(0, 0, 0, 0.6);
