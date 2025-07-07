@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
@@ -59,11 +60,12 @@ async function generateStaticFeed() {
     html, body {
       margin: 0;
       padding: 0;
+      padding-bottom: 0 !important;
       width: 100%;
+      height: 100%;
       background: #fff;
       font-family: sans-serif;
       overflow-x: hidden;
-      padding-bottom: 0 !important;
     }
 
     .grid {
@@ -90,6 +92,8 @@ async function generateStaticFeed() {
 
     video {
       width: 100%;
+      height: calc(100vh - 30px);
+      object-fit: cover;
       display: block;
       opacity: 0;
       transition: opacity 0.8s ease-in-out;
@@ -123,26 +127,28 @@ async function generateStaticFeed() {
     }
 
     .info {
-      padding: 6px 10px 4px;
+      padding: 4px 0 2px;
       text-align: center;
+      font-size: 12px;
     }
 
     .emoji {
-      font-size: 24px;
+      font-size: 20px;
     }
 
     .date {
-      font-size: 14px;
+      font-size: 13px;
       color: #444;
     }
 
     .tag {
-      margin-top: 6px;
+      margin-top: 4px;
       background: yellow;
       font-weight: bold;
-      padding: 6px;
+      padding: 4px;
       border-radius: 6px;
       display: inline-block;
+      font-size: 13px;
     }
   </style>
 </head>
