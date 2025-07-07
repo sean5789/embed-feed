@@ -70,7 +70,7 @@ async function generateStaticFeed() {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 15px;
-  padding: 1px; /* ✅ réduit à 1px */
+  padding: Opx; /* ✅ réduit à Opx */
   overflow: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
