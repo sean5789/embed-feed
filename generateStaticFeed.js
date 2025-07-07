@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
@@ -76,18 +77,21 @@ async function generateStaticFeed() {
       overflow-x: auto;
       gap: 15px;
       padding: 0 10px;
-      box-sizing: border-box;
-      margin-bottom: 0 !important;
-
-      /* ✅ Changement ici */
-      scroll-snap-type: none;
       scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box;
+      margin-bottom: 0;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .grid::-webkit-scrollbar {
+      display: none;
     }
 
     .card {
       flex: 0 0 auto;
       width: 240px;
+      scroll-snap-align: start;
       background: white;
       border-radius: 16px;
       overflow: hidden;
@@ -104,7 +108,6 @@ async function generateStaticFeed() {
       display: block;
       opacity: 0;
       transition: opacity 0.8s ease-in-out;
-      border-radius: 0;
     }
 
     video.loaded {
