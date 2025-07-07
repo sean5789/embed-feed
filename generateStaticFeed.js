@@ -1,3 +1,4 @@
+
 require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
@@ -102,15 +103,14 @@ async function generateStaticFeed() {
 
     .sound-btn {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      font-size: 24px;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.5);
       border: none;
       border-radius: 50%;
-      padding: 10px;
+      padding: 6px;
+      font-size: 16px;
+      color: white;
       cursor: pointer;
       transition: opacity 0.3s ease;
     }
@@ -155,65 +155,44 @@ async function generateStaticFeed() {
   </div>
 
   <script>
-    // Fade-in
     document.addEventListener("DOMContentLoaded", function () {
       const videos = document.querySelectorAll("video");
-      videos.forEach(video => {
+      const buttons = document.querySelectorAll(".sound-btn");
+
+      videos.forEach((video, i) => {
         video.addEventListener("loadeddata", () => {
           video.classList.add("loaded");
         });
+
+        video.addEventListener("click", () => toggleSound(video, buttons[i]));
+        buttons[i].addEventListener("click", e => {
+          e.stopPropagation();
+          toggleSound(video, buttons[i]);
+        });
       });
-    });
 
-    // Son exclusif
-    document.addEventListener("click", function (e) {
-      const videoWrapper = e.target.closest(".video-wrapper");
-      if (!videoWrapper) return;
-
-      const video = videoWrapper.querySelector("video");
-      const btn = videoWrapper.querySelector(".sound-btn");
-
-      if (video && btn) {
-        const allVideos = document.querySelectorAll("video");
-        allVideos.forEach(v => {
-          if (v !== video) {
+      function toggleSound(activeVideo, activeBtn) {
+        videos.forEach((v, j) => {
+          if (v !== activeVideo) {
             v.muted = true;
-            const b = v.closest(".video-wrapper")?.querySelector(".sound-btn");
-            if (b) b.classList.remove("hidden");
+            buttons[j].classList.remove("hidden");
           }
         });
 
-        video.muted = false;
-        btn.classList.add("hidden");
+        activeVideo.muted = !activeVideo.muted;
+        if (!activeVideo.muted) {
+          activeBtn.classList.add("hidden");
+        } else {
+          activeBtn.classList.remove("hidden");
+        }
       }
     });
 
-    // Bouton clique seul (optionnel)
-    document.querySelectorAll(".sound-btn").forEach(btn => {
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation(); // empêche le double déclenchement
-        const video = this.closest(".video-wrapper").querySelector("video");
-        if (video) {
-          const allVideos = document.querySelectorAll("video");
-          allVideos.forEach(v => {
-            if (v !== video) {
-              v.muted = true;
-              const b = v.closest(".video-wrapper")?.querySelector(".sound-btn");
-              if (b) b.classList.remove("hidden");
-            }
-          });
-
-          video.muted = false;
-          this.classList.add("hidden");
-        }
-      });
-    });
-
-    // Iframe height for Bubble
     function sendHeight() {
       const height = document.body.scrollHeight;
       parent.postMessage({ type: "adjustHeight", height }, "*");
     }
+
     window.addEventListener("load", sendHeight);
     window.addEventListener("resize", sendHeight);
     new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
@@ -229,4 +208,3 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
