@@ -5,6 +5,28 @@ const axios = require('axios');
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
 
+// ➕ Fonction pour afficher le temps relatif
+function getRelativeTime(date) {
+  const rtf = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' });
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now - then;
+
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours   = Math.floor(minutes / 60);
+  const days    = Math.floor(hours / 24);
+  const months  = Math.floor(days / 30);
+  const years   = Math.floor(months / 12);
+
+  if (years > 0) return rtf.format(-years, 'year');
+  if (months > 0) return rtf.format(-months, 'month');
+  if (days > 0) return rtf.format(-days, 'day');
+  if (hours > 0) return rtf.format(-hours, 'hour');
+  if (minutes > 0) return rtf.format(-minutes, 'minute');
+  return rtf.format(-seconds, 'second');
+}
+
 async function generateStaticFeed() {
   try {
     console.log("📱 Connexion à l’API EmbedSocial...");
@@ -27,7 +49,7 @@ async function generateStaticFeed() {
     console.log(`✅ ${posts.length} posts récupérés`);
 
     const cardsHtml = posts.map(p => {
-      const date = new Date(p.created_on).toLocaleDateString('fr-FR');
+      const date = getRelativeTime(p.created_on);
       const media = p.video?.source
         ? `<div class="video-wrapper">
              <video src="${p.video.source}" autoplay muted loop playsinline preload="auto"></video>
@@ -40,7 +62,7 @@ async function generateStaticFeed() {
           ${media}
           <div class="info">
             <div class="emoji">🥳</div>
-            <div class="date">${date}</strong> ! 🌍</div>
+            <div class="date"><strong>${date}</strong> • NEW ! 🌍</div>
             <div class="tag">🥳➡️</div>
           </div>
         </div>`;
@@ -53,8 +75,6 @@ async function generateStaticFeed() {
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <link rel="preconnect" href="https://embedsocial.com">
-  <link rel="dns-prefetch" href="https://embedsocial.com">
   <style>
     html, body {
       margin: 0;
@@ -62,12 +82,6 @@ async function generateStaticFeed() {
       background: #fff;
       font-family: sans-serif;
       overflow: hidden;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-
-    body::-webkit-scrollbar {
-      display: none;
     }
 
     .grid {
@@ -76,14 +90,6 @@ async function generateStaticFeed() {
       gap: 15px;
       padding: 0 10px;
       scroll-behavior: smooth;
-      box-sizing: border-box;
-      margin-bottom: 0;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .grid::-webkit-scrollbar {
-      display: none;
     }
 
     .card {
@@ -93,8 +99,6 @@ async function generateStaticFeed() {
       background: white;
       border-radius: 16px;
       overflow: hidden;
-      margin: 0;
-      padding: 0;
     }
 
     .video-wrapper {
@@ -126,7 +130,6 @@ async function generateStaticFeed() {
       background-repeat: no-repeat;
       background-position: center;
       background-size: 60%;
-      transition: opacity 0.3s ease;
     }
 
     .sound-btn.hidden {
@@ -137,7 +140,6 @@ async function generateStaticFeed() {
     .info {
       padding: 6px 10px 2px;
       text-align: center;
-      margin-bottom: 0;
     }
 
     .emoji {
@@ -147,7 +149,6 @@ async function generateStaticFeed() {
     .date {
       font-size: 14px;
       color: #444;
-      font-weight: bold;
     }
 
     .tag {
@@ -193,15 +194,6 @@ async function generateStaticFeed() {
         activeVideo.muted = !activeVideo.muted;
         activeBtn.classList.toggle("hidden", !activeVideo.muted);
       }
-
-      function sendHeight() {
-        const height = document.body.scrollHeight;
-        parent.postMessage({ type: "adjustHeight", height }, "*");
-      }
-
-      window.addEventListener("load", sendHeight);
-      window.addEventListener("resize", sendHeight);
-      new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
     });
   </script>
 </body>
