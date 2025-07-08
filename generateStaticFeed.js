@@ -40,7 +40,7 @@ async function generateStaticFeed() {
           ${media}
           <div class="info">
             <div class="emoji">🥳</div>
-            <div class="date">${date} • NEW ! 🌍</div>
+            <div class="date">${date} ! 🌍</div>
             <div class="tag">🥳➡️</div>
           </div>
         </div>`;
