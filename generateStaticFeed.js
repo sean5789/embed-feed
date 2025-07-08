@@ -59,7 +59,6 @@ async function generateStaticFeed() {
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
       background: #fff;
       font-family: sans-serif;
       overflow: hidden;
@@ -89,7 +88,7 @@ async function generateStaticFeed() {
 
     .card {
       flex: 0 0 auto;
-      width: 240px;
+      width: 280px;
       scroll-snap-align: start;
       background: white;
       border-radius: 16px;
