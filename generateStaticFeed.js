@@ -5,9 +5,9 @@ const axios = require('axios');
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
 
-// ➕ Fonction pour afficher le temps relatif
+// 🔄 Format relatif en anglais
 function getRelativeTime(date) {
-  const rtf = new Intl.RelativeTimeFormat('fr', { numeric: 'auto' });
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
   const now = new Date();
   const then = new Date(date);
   const diffMs = now - then;
@@ -29,7 +29,7 @@ function getRelativeTime(date) {
 
 async function generateStaticFeed() {
   try {
-    console.log("📱 Connexion à l’API EmbedSocial...");
+    console.log("📱 Connecting to EmbedSocial API...");
     const res = await axios.get(
       `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${ALBUM_REF}`,
       {
@@ -42,18 +42,18 @@ async function generateStaticFeed() {
 
     const posts = res.data.data || [];
     if (!Array.isArray(posts)) {
-      console.error("❌ Format inattendu");
+      console.error("❌ Unexpected format");
       return;
     }
 
-    console.log(`✅ ${posts.length} posts récupérés`);
+    console.log(`✅ ${posts.length} posts fetched`);
 
     const cardsHtml = posts.map(p => {
-      const date = getRelativeTime(p.created_on);
+      const relativeTime = getRelativeTime(p.created_on);
       const media = p.video?.source
         ? `<div class="video-wrapper">
              <video src="${p.video.source}" autoplay muted loop playsinline preload="auto"></video>
-             <button class="sound-btn" title="Activer le son"></button>
+             <button class="sound-btn" title="Unmute"></button>
            </div>`
         : `<img src="${p.image || p.thumbnail || ''}" alt="post">`;
 
@@ -62,17 +62,17 @@ async function generateStaticFeed() {
           ${media}
           <div class="info">
             <div class="emoji">🥳</div>
-            <div class="date"><strong>${date}</strong> • NEW ! 🌍</div>
+            <div class="date"><strong>${relativeTime}</strong> • NEW! 🌍</div>
             <div class="tag">🥳➡️</div>
           </div>
         </div>`;
     }).join('\n');
 
     const html = `<!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Flux EmbedSocial</title>
+  <title>EmbedSocial Feed</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
   <style>
@@ -82,6 +82,12 @@ async function generateStaticFeed() {
       background: #fff;
       font-family: sans-serif;
       overflow: hidden;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    body::-webkit-scrollbar {
+      display: none;
     }
 
     .grid {
@@ -200,9 +206,9 @@ async function generateStaticFeed() {
 </html>`;
 
     fs.writeFileSync('index.html', html);
-    console.log("✅ index.html généré avec succès.");
+    console.log("✅ index.html generated successfully.");
   } catch (error) {
-    console.error("❌ Erreur :", error.message);
+    console.error("❌ Error:", error.message);
   }
 }
 
