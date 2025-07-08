@@ -88,7 +88,7 @@ async function generateStaticFeed() {
 
     .card {
       flex: 0 0 auto;
-      width: 200px;
+      width: 170px;
       scroll-snap-align: start;
       background: white;
       border-radius: 16px;
