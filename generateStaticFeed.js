@@ -62,7 +62,7 @@ async function generateStaticFeed() {
           ${media}
           <div class="info">
             <div class="emoji">🥳</div>
-            <div class="date"><strong>${relativeTime}</strong> • NEW! 🌍</div>
+            <div class="date"><strong>${relativeTime}</strong> ! 🌍</div>
             <div class="tag">🥳➡️</div>
           </div>
         </div>`;
