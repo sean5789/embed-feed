@@ -27,24 +27,26 @@ async function generateStaticFeed() {
     console.log(`✅ ${posts.length} posts récupérés`);
 
     const cardsHtml = posts.map(p => {
-      const date = new Date(p.created_on).toLocaleDateString('fr-FR');
-      const media = p.video?.source
-        ? `<div class="video-wrapper">
-             <video src="${p.video.source}" autoplay muted loop playsinline preload="auto"></video>
-             <button class="sound-btn" title="Activer le son"></button>
-           </div>`
-        : `<img src="${p.image || p.thumbnail || ''}" alt="post">`;
+  const date = new Date(p.created_on).toLocaleDateString('fr-FR');
+  const media = p.video?.source
+    ? `<div class="video-wrapper">
+         <video src="${p.video.source}" autoplay muted loop playsinline preload="auto"></video>
+         <button class="sound-btn" title="Activer le son"></button>
+       </div>`
+    : `<img src="${p.image || p.thumbnail || ''}" alt="post">`;
 
-      return `
-        <div class="card">
-          ${media}
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">${date}</strong> ! 🌍</div>
-            <div class="tag">🥳➡️</div>
-          </div>
-        </div>`;
-    }).join('\n');
+  return `
+    <div class="card">
+      ${media}
+      <div class="info">
+        <div class="emoji">🥳</div>
+        <div class="date">${date}</strong> ! 🌍</div>
+        <div class="tag">
+          <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        </div>
+      </div>
+    </div>`;
+}).join('\n');
 
     const html = `<!DOCTYPE html>
 <html lang="fr">
