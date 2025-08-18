@@ -455,6 +455,18 @@
         activeBtn.classList.toggle("hidden", !activeVideo.muted);
       }
 
+      // Fallback pour ouvrir les liens même si sandbox bloque
+      const extLinks = document.querySelectorAll('.tag a');
+      extLinks.forEach(a => {
+        a.addEventListener('click', (e) => {
+          const w = window.open(a.href, '_blank');
+          if (!w) {
+            e.preventDefault();
+            try { parent.postMessage({ type: 'openExternal', url: a.href }, '*'); } catch {}
+          }
+        });
+      });
+
       function sendHeight() {
         const height = document.body.scrollHeight;
         parent.postMessage({ type: "adjustHeight", height }, "*");
