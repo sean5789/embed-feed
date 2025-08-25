@@ -40,7 +40,7 @@ async function generateStaticFeed() {
           ${media}
           <div class="info">
             <div class="emoji">🥳</div>
-            <div class="date">${date}</strong> ! 🌍</div>
+            <div class="date">In 2025</strong> ! 🌍</div>
             <div class="tag">
               <a href="https://www.theushuaiaexperience.com/en/club/calendar"
                  target="_blank"
