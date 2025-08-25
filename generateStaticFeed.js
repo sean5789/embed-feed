@@ -149,7 +149,7 @@ async function generateStaticFeed() {
     }
 
     .date {
-      font-size: 18px;
+      font-size: 17px;
       color: #444;
       font-weight: bold;
     }
