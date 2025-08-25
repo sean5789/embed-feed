@@ -48,7 +48,7 @@ async function generateStaticFeed() {
             </div>
           </div>
         </div>`;
-    }).join('\\n');
+    }).join('\n'); // ✅ corrigé ici
 
     const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -178,12 +178,10 @@ async function generateStaticFeed() {
       const buttons = document.querySelectorAll(".sound-btn");
 
       videos.forEach((video, i) => {
-        // Affichage progressif
         video.addEventListener("loadeddata", () => {
           video.classList.add("loaded");
         });
 
-        // ➜ Ouvrir l'URL à la place d'activer le son
         video.addEventListener("click", () => openCalendar());
         if (buttons[i]) {
           buttons[i].addEventListener("click", (e) => {
@@ -200,7 +198,6 @@ async function generateStaticFeed() {
         }
       }
 
-      // Fallback pour ouvrir les liens même si sandbox bloque
       const extLinks = document.querySelectorAll('.tag a');
       extLinks.forEach(a => {
         a.addEventListener('click', (e) => {
@@ -233,4 +230,3 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
