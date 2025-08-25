@@ -77,7 +77,7 @@ async function generateStaticFeed() {
     .grid {
       display: flex;
       overflow-x: auto;
-      gap: 15px;
+      gap: 14px;
       padding: 0 10px;
       scroll-behavior: smooth;
       box-sizing: border-box;
