@@ -1,122 +1,113 @@
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
-  const BATCH = 5; // nombre de vidéos par chargement
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Flux vidéos</title>
+  <style>
+    /* tes styles existants (.grid, .card, .video-wrapper, .emoji, .date, .tag, etc.) */
 
-  const grid = document.querySelector(".grid");
-  const cards = Array.from(grid.querySelectorAll(".card"));
-  const allVideos = Array.from(grid.querySelectorAll("video"));
+    /* ajout pour lazy-load */
+    .card.deferred { display:none }
+    #feed-sentinel { height:1px }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <!-- tes cartes complètes avec video + emoji + date + tag -->
+    <div class="card">
+      <div class="video-wrapper">
+        <video src="video1.mp4" autoplay muted loop playsinline preload="auto"></video>
+        <button class="sound-btn"></button>
+      </div>
+      <div class="info">
+        <div class="emoji">🥳</div>
+        <div class="date">In 2025 ! 🌍</div>
+        <div class="tag"><a href="https://..." target="_blank">🥳➡️</a></div>
+      </div>
+    </div>
+    <!-- … autres cartes … -->
+  </div>
 
-  // --- CSS minimal pour masquer les cartes différées (si pas déjà présent) ---
-  const styleId = "__lazy_cards_style__";
-  if (!document.getElementById(styleId)) {
-    const st = document.createElement("style");
-    st.id = styleId;
-    st.textContent = ".card.deferred{display:none;} #feed-sentinel{height:1px}";
-    document.head.appendChild(st);
-  }
+  <!-- Sentinel pour déclencher le chargement suivant -->
+  <div id="feed-sentinel"></div>
 
-  // --- Sentinel (déclenche le chargement des lots suivants) ---
-  let sentinel = document.getElementById("feed-sentinel");
-  if (!sentinel) {
-    sentinel = document.createElement("div");
-    sentinel.id = "feed-sentinel";
-    grid.insertAdjacentElement("afterend", sentinel);
-  }
+  <!-- SCRIPT lazy-load -->
+  <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
+    const BATCH = 5;
 
-  // 1) Passer toutes les <video> en lazy : src -> data-src, preload none
-  allVideos.forEach((v) => {
-    if (v.src) { v.dataset.src = v.src; v.removeAttribute("src"); }
-    v.preload = "none";
-    v.muted = true;
-    v.playsInline = true;
-    v.load();
-  });
+    const cards = Array.from(document.querySelectorAll(".card"));
+    const allVideos = Array.from(document.querySelectorAll("video"));
 
-  // 2) Masquer toutes les cartes sauf les 5 premières
-  cards.forEach((c, i) => { if (i >= BATCH) c.classList.add("deferred"); });
+    // mettre toutes les vidéos en lazy
+    allVideos.forEach(v => {
+      if (v.src) { v.dataset.src = v.src; v.removeAttribute("src"); }
+      v.preload = "none"; v.muted = true; v.playsInline = true; v.load();
+    });
 
-  // 3) Active une vidéo (remet son src et fade-in quand prête)
-  function activateVideo(v) {
-    if (!v || v.src) return; // déjà activée ou pas de vidéo
-    if (v.dataset.src) v.src = v.dataset.src;
-    v.addEventListener("loadeddata", () => v.classList.add("loaded"), { once: true });
-    v.load();
-  }
+    // masquer toutes les cartes sauf les 5 premières
+    cards.forEach((c, i) => { if (i >= BATCH) c.classList.add("deferred"); });
 
-  // 4) Charge un lot de 5 cartes (révèle + active vidéos)
-  let nextIndex = BATCH; // 0..4 déjà visibles
-  function loadNextBatch() {
-    const start = nextIndex;
-    const end = Math.min(start + BATCH, cards.length);
-    for (let i = start; i < end; i++) {
-      const card = cards[i];
-      const vid = card.querySelector("video");
-      card.classList.remove("deferred");
-      activateVideo(vid);
-      playObserver.observe(vid); // sera auto-play/pause
+    // activer une vidéo
+    function activateVideo(v) {
+      if (!v || v.src) return;
+      if (v.dataset.src) v.src = v.dataset.src;
+      v.addEventListener("loadeddata", () => v.classList.add("loaded"), { once: true });
+      v.load();
     }
-    nextIndex = end;
-    if (nextIndex >= cards.length) io.disconnect(); // tout chargé
-    sendHeight(); // si utilisé en iframe
-  }
 
-  // 5) Lazy-load par scroll
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach(e => { if (e.isIntersecting) loadNextBatch(); });
-  }, { root: null, rootMargin: "600px 0px" });
-  io.observe(sentinel);
+    // observer vidéos pour play/pause
+    const playObserver = new IntersectionObserver((entries) => {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (isIntersecting) { activateVideo(target); target.play().catch(()=>{}); }
+        else { target.pause(); }
+      });
+    }, { threshold: 0.25 });
 
-  // 6) Auto play/pause selon visibilité (perf/batterie)
-  const playObserver = new IntersectionObserver((entries) => {
-    entries.forEach(({ target, isIntersecting }) => {
-      if (!target) return;
-      if (isIntersecting) {
-        activateVideo(target);
-        target.play().catch(() => {});
-      } else {
-        target.pause();
+    // charger les lots de 5
+    let nextIndex = BATCH;
+    function loadNextBatch() {
+      const start = nextIndex;
+      const end = Math.min(start + BATCH, cards.length);
+      for (let i = start; i < end; i++) {
+        const card = cards[i];
+        const vid = card.querySelector("video");
+        card.classList.remove("deferred");
+        activateVideo(vid);
+        playObserver.observe(vid);
       }
-    });
-  }, { threshold: 0.25 });
-
-  // observer les 5 premières déjà visibles
-  allVideos.slice(0, BATCH).forEach(v => {
-    activateVideo(v);
-    playObserver.observe(v);
-  });
-
-  // 7) Tes handlers existants (ouvrir le calendrier)
-  function openCalendar() {
-    const w = window.open(CAL_URL, "_blank");
-    if (!w) {
-      try { parent.postMessage({ type: "openExternal", url: CAL_URL }, "*"); } catch {}
+      nextIndex = end;
+      if (nextIndex >= cards.length) io.disconnect();
     }
-  }
-  const buttons = Array.from(document.querySelectorAll(".sound-btn"));
-  allVideos.forEach((video, i) => {
-    video.addEventListener("click", openCalendar);
-    if (buttons[i]) {
-      buttons[i].addEventListener("click", (e) => { e.stopPropagation(); openCalendar(); });
+
+    // observer le sentinel (scroll vertical)
+    const sentinel = document.getElementById("feed-sentinel");
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) loadNextBatch(); });
+    }, { root: null, rootMargin: "400px 0px" });
+    io.observe(sentinel);
+
+    // init premières vidéos
+    allVideos.slice(0, BATCH).forEach(v => { activateVideo(v); playObserver.observe(v); });
+
+    // tes handlers clic calendrier et liens
+    function openCalendar() {
+      const w = window.open(CAL_URL, "_blank");
+      if (!w) { try { parent.postMessage({ type: "openExternal", url: CAL_URL }, "*"); } catch {} }
     }
-  });
-  document.querySelectorAll('.tag a').forEach(a => {
-    a.addEventListener('click', (e) => {
-      const w = window.open(a.href, '_blank');
-      if (!w) { e.preventDefault(); try { parent.postMessage({ type:'openExternal', url:a.href }, '*'); } catch {} }
+    const buttons = Array.from(document.querySelectorAll(".sound-btn"));
+    allVideos.forEach((video, i) => {
+      video.addEventListener("click", openCalendar);
+      if (buttons[i]) buttons[i].addEventListener("click", (e) => { e.stopPropagation(); openCalendar(); });
+    });
+    document.querySelectorAll('.tag a').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const w = window.open(a.href, '_blank');
+        if (!w) { e.preventDefault(); try { parent.postMessage({ type:'openExternal', url:a.href }, '*'); } catch {} }
+      });
     });
   });
-
-  // 8) Ajuster la hauteur pour un parent (si intégré en iframe)
-  function sendHeight() {
-    try {
-      const height = document.body.scrollHeight;
-      parent.postMessage({ type: "adjustHeight", height }, "*");
-    } catch {}
-  }
-  window.addEventListener("load", sendHeight);
-  window.addEventListener("resize", sendHeight);
-  new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
-
-});
-</script>
+  </script>
+</body>
+</html>
