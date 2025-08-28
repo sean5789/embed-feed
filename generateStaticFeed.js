@@ -15,7 +15,6 @@ function esc(str = '') {
 }
 
 function mediaHtml(p) {
-  // Préfère la vidéo si présente, sinon image/thumbnail
   if (p?.video?.source) {
     return `
       <div class="video-wrapper">
@@ -48,24 +47,11 @@ async function generateStaticFeed() {
     const posts = Array.isArray(res?.data?.data) ? res.data.data : [];
     console.log(`✅ ${posts.length} posts récupérés`);
 
-    const cardsHtml = posts
-      .map((p) => {
-        const media = mediaHtml(p);
-
-        return `
-          <div class="card">
-            ${media}
-            <div class="info">
-              <div class="emoji">🥳</div>
-              <div class="date">In 2025 ! 🌍</div>
-              <div class="tag">
-                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
-              </div>
-            </div>
-          </div>
-        `;
-      })
-      .join('\n');
+    // On stocke les données sous forme d’objets sérialisés pour JS client
+    const postsForClient = posts.map(p => ({
+      video: p?.video?.source || null,
+      image: p.image || p.thumbnail || null,
+    }));
 
     const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -74,19 +60,15 @@ async function generateStaticFeed() {
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <link rel="preconnect" href="https://embedsocial.com">
-  <link rel="dns-prefetch" href="https://embedsocial.com">
   <style>
-    html, body { margin: 0; padding: 0; background: #fff; font-family: sans-serif; overflow: hidden; -ms-overflow-style: none; scrollbar-width: none; }
-    body::-webkit-scrollbar { display: none; }
-    .grid { display: flex; overflow-x: auto; gap: 14px; padding: 0 10px; scroll-behavior: smooth; box-sizing: border-box; margin-bottom: 0; scrollbar-width: none; -ms-overflow-style: none; }
-    .grid::-webkit-scrollbar { display: none; }
-    .card { flex: 0 0 auto; width: 165px; scroll-snap-align: start; background: white; border-radius: 16px; overflow: hidden; margin: 0; padding: 0; }
+    html, body { margin: 0; padding: 0; background: #fff; font-family: sans-serif; }
+    .grid { display: flex; overflow-x: auto; gap: 14px; padding: 0 10px; scroll-behavior: smooth; box-sizing: border-box; }
+    .card { flex: 0 0 auto; width: 165px; scroll-snap-align: start; background: white; border-radius: 16px; overflow: hidden; }
     .video-wrapper { position: relative; }
     video { width: 100%; display: block; opacity: 0; transition: opacity 0.8s ease-in-out; }
     video.loaded { opacity: 1; }
-    .sound-btn { position: absolute; bottom: 10px; right: 6px; width: 26px; height: 26px; background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%; cursor: pointer; background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>'); background-repeat: no-repeat; background-position: center; background-size: 60%; transition: opacity 0.3s ease; }
-    .info { padding: 6px 10px 2px; text-align: center; margin-bottom: 0; }
+    .sound-btn { position: absolute; bottom: 10px; right: 6px; width: 26px; height: 26px; background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%; cursor: pointer; background-repeat: no-repeat; background-position: center; background-size: 60%; }
+    .info { padding: 6px 10px 2px; text-align: center; }
     .emoji { font-size: 24px; }
     .date { font-size: 15px; color: #444; font-weight: bold; }
     .tag { margin-top: 6px; display: inline-block; }
@@ -94,63 +76,54 @@ async function generateStaticFeed() {
   </style>
 </head>
 <body>
-  <div class="grid">
-    ${cardsHtml}
-  </div>
+  <div class="grid" id="feed"></div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
-      const videos = document.querySelectorAll("video");
-      const buttons = document.querySelectorAll(".sound-btn");
+    const posts = ${JSON.stringify(postsForClient)};
+    const FEED = document.getElementById('feed');
+    const BATCH_SIZE = 5;
+    let index = 0;
 
-      videos.forEach((video, i) => {
-        video.addEventListener("loadeddata", () => {
-          video.classList.add("loaded");
-        });
+    function createCard(p) {
+      const media = p.video
+        ? \`
+          <div class="video-wrapper">
+            <video src="\${p.video}" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
+          </div>\`
+        : \`<img src="\${p.image || ''}" alt="post">\`;
 
-        video.addEventListener("click", () => openCalendar());
+      return \`
+        <div class="card">
+          \${media}
+          <div class="info">
+            <div class="emoji">🥳</div>
+            <div class="date">In 2025 ! 🌍</div>
+            <div class="tag">
+              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+            </div>
+          </div>
+        </div>
+      \`;
+    }
 
-        if (buttons[i]) {
-          buttons[i].addEventListener("click", (e) => {
-            e.stopPropagation();
-            openCalendar();
-          });
-        }
+    function loadNextBatch() {
+      const slice = posts.slice(index, index + BATCH_SIZE);
+      slice.forEach(p => {
+        FEED.insertAdjacentHTML('beforeend', createCard(p));
       });
+      index += BATCH_SIZE;
+    }
 
-      function openCalendar() {
-        const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
-        if (!w) {
-          try {
-            parent.postMessage({ type: "openExternal", url: CAL_URL }, "*");
-          } catch (e) {}
+    // Charger les 5 premiers
+    loadNextBatch();
+
+    FEED.addEventListener('scroll', () => {
+      if (FEED.scrollLeft + FEED.clientWidth >= FEED.scrollWidth - 10) {
+        if (index < posts.length) {
+          loadNextBatch();
         }
       }
-
-      const extLinks = document.querySelectorAll('.tag a');
-      extLinks.forEach(a => {
-        a.addEventListener('click', (e) => {
-          const w = window.open(a.href, '_blank', 'noopener,noreferrer');
-          if (!w) {
-            e.preventDefault();
-            try {
-              parent.postMessage({ type: 'openExternal', url: a.href }, '*');
-            } catch (e2) {}
-          }
-        });
-      });
-
-      function sendHeight() {
-        const height = document.body.scrollHeight;
-        try {
-          parent.postMessage({ type: "adjustHeight", height }, "*");
-        } catch (e) {}
-      }
-
-      window.addEventListener("load", sendHeight);
-      window.addEventListener("resize", sendHeight);
-      new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
     });
   </script>
 </body>
@@ -164,3 +137,4 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
