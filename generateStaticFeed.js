@@ -95,7 +95,7 @@ async function generateStaticFeed() {
           \${media}
           <div class="info">
             <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
+            <div class="date">In 2025 ! ✈️🌍</div>
             <div class="tag">
               <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a>
             </div>
