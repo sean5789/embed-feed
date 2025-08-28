@@ -5,422 +5,423 @@
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
+  <link rel="preconnect" href="https://embedsocial.com">
+  <link rel="dns-prefetch" href="https://embedsocial.com">
   <style>
-    html, body { margin:0; padding:0; background:#fff; font-family:sans-serif; }
+    html, body {
+      margin: 0; padding: 0; background: #fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      overflow: hidden; -ms-overflow-style: none; scrollbar-width: none;
+    }
+    body::-webkit-scrollbar { display: none; }
 
-    /* Carrousel horizontal (rendu 2ᵉ photo) */
     .grid {
-      display:flex !important;
-      flex-wrap:nowrap !important;
-      overflow-x:auto !important;
-      overflow-y:hidden !important;
-      gap:14px !important;
-      padding:10px !important;
-      scroll-snap-type:x mandatory !important;
-      -webkit-overflow-scrolling:touch !important;
+      display: flex; overflow-x: auto; gap: 14px; padding: 0 10px; scroll-behavior: smooth; box-sizing: border-box;
+      margin-bottom: 0; scrollbar-width: none; -ms-overflow-style: none;
     }
-    .grid::-webkit-scrollbar { display:none !important; }
-    .grid { scrollbar-width:none !important; }
+    .grid::-webkit-scrollbar { display: none; }
 
-    /* Cartes compactes */
     .card {
-      flex:0 0 165px !important;
-      width:165px !important;
-      max-width:165px !important;
-      border-radius:16px !important;
-      overflow:hidden !important;
-      background:#fff !important;
-      box-shadow:0 2px 6px rgba(0,0,0,.1) !important;
-      scroll-snap-align:start !important;
+      flex: 0 0 auto; width: 165px; scroll-snap-align: start; background: #fff; border-radius: 16px;
+      overflow: hidden; margin: 0; padding: 0; border: 1px solid rgba(0,0,0,0.06);
     }
 
-    .video-wrapper { position:relative !important; aspect-ratio:9/16 !important; background:#000 !important; }
-    .video-wrapper > video {
-      width:100% !important;
-      height:100% !important;
-      object-fit:cover !important;
-      display:block !important;
-      opacity:0;
-      transition:opacity .8s ease-in-out;
-    }
-    .video-wrapper > video.loaded { opacity:1; }
+    .video-wrapper { position: relative; background: #000; }
+    video, img { width: 100%; display: block; }
+    video { opacity: 0; transition: opacity 0.8s ease-in-out; }
+    video.loaded { opacity: 1; }
 
     .sound-btn {
-      position:absolute; bottom:10px; right:6px;
-      width:26px; height:26px; border:none; border-radius:50%;
-      background:rgba(0,0,0,.6);
-      cursor:pointer;
-      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat:no-repeat; background-position:center; background-size:60%;
+      position: absolute; bottom: 10px; right: 6px; width: 26px; height: 26px;
+      background: rgba(0,0,0,0.6); border: none; border-radius: 50%; cursor: pointer;
+      background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+      background-repeat: no-repeat; background-position: center; background-size: 60%; transition: opacity 0.3s ease;
     }
 
-    .info { text-align:center !important; padding:8px !important; }
-    .emoji { font-size:20px !important; }
-    .date { font-weight:700 !important; color:#444 !important; }
-    .tag { margin-top:6px !important; display:inline-block !important; }
-    .tag a { color:inherit; text-decoration:none; background:yellow; padding:6px; border-radius:6px; font-weight:bold; }
-
-    /* Lazy-load */
-    .card.deferred { display:none }
-    #feed-sentinel { height:1px }
+    .info { padding: 6px 10px 8px; text-align: center; margin-bottom: 0; }
+    .emoji { font-size: 24px; }
+    .date { font-size: 15px; color: #444; font-weight: bold; }
+    .tag { margin-top: 6px; display: inline-block; }
+    .tag a { color: inherit; text-decoration: none; display: inline-block; background: yellow; font-weight: bold; padding: 6px; border-radius: 6px; }
   </style>
 </head>
 <body>
   <div class="grid">
     
-        <div class="card">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
             <video src="https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4" autoplay muted loop playsinline preload="auto"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
             <video src="https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/video.mp4" autoplay muted loop playsinline preload="auto"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
             <video src="https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/video.mp4" autoplay muted loop playsinline preload="auto"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
             <video src="https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/video.mp4" autoplay muted loop playsinline preload="auto"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
             <video src="https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/video.mp4" autoplay muted loop playsinline preload="auto"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/17874/17874006954383195/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/17874/17874006954383195/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18276/18276660490284988/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18276/18276660490284988/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/17904/17904133209206356/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/17904/17904133209206356/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">07/07/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18090/18090082702712245/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18090/18090082702712245/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">30/06/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/17908/17908929222168305/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/17908/17908929222168305/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">27/06/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18070/18070960315998638/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18070/18070960315998638/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">27/06/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/17880/17880672516220785/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/17880/17880672516220785/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">22/06/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/17926/17926257510065190/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/17926/17926257510065190/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">22/06/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18072/18072032663503864/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18072/18072032663503864/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">21/06/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
 
-        <div class="card deferred">
-          
+          <div class="card">
+            
           <div class="video-wrapper">
-            <video data-src="https://embedsocial.com/admin/mediacache/feed-media/18018/18018624464714498/video.mp4" autoplay muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Calendrier"></button>
+            <video src="https://embedsocial.com/admin/mediacache/feed-media/18018/18018624464714498/video.mp4" autoplay muted loop playsinline preload="auto"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! 🌍</div>
-            <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+        
+            <div class="info">
+              <div class="emoji">🥳</div>
+              <div class="date">20/06/2025 🌍</div>
+              <div class="tag">
+                <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              </div>
             </div>
           </div>
-        </div>
+        
   </div>
-  <div id="feed-sentinel"></div>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function(){
-      const CAL_URL='https://www.theushuaiaexperience.com/en/club/calendar';
-      const BATCH=5;
-      const grid=document.querySelector('.grid');
+    document.addEventListener("DOMContentLoaded", function () {
+      const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
+      const videos = document.querySelectorAll("video");
+      const buttons = document.querySelectorAll(".sound-btn");
 
-      /* Correctif au cas où l'hôte écrase les styles */
-      if(grid){
-        Object.assign(grid.style,{
-          display:'flex',flexWrap:'nowrap',overflowX:'auto',overflowY:'hidden',
-          gap:'14px',padding:'10px',scrollSnapType:'x mandatory',WebkitOverflowScrolling:'touch'
+      videos.forEach((video, i) => {
+        video.addEventListener("loadeddata", () => {
+          video.classList.add("loaded");
         });
-        grid.querySelectorAll('.card').forEach(c=>{
-          Object.assign(c.style,{
-            flex:'0 0 165px',width:'165px',maxWidth:'165px',
-            borderRadius:'16px',overflow:'hidden',background:'#fff',
-            boxShadow:'0 2px 6px rgba(0,0,0,.1)',scrollSnapAlign:'start'
+        video.addEventListener("click", () => openCalendar());
+        if (buttons[i]) {
+          buttons[i].addEventListener("click", (e) => {
+            e.stopPropagation();
+            openCalendar();
           });
-          const w=c.querySelector('.video-wrapper');
-          if(w) Object.assign(w.style,{position:'relative',aspectRatio:'9/16',background:'#000'});
-          const v=c.querySelector('video');
-          if(v) Object.assign(v.style,{width:'100%',height:'100%',objectFit:'cover',display:'block'});
-        });
-      }
-
-      const cards=[...document.querySelectorAll('.card')];
-      const videos=[...document.querySelectorAll('video')];
-
-      function activateVideo(v){
-        if(!v) return;
-        if(!v.src && v.dataset.src) v.src=v.dataset.src;
-        v.addEventListener('loadeddata',()=>v.classList.add('loaded'),{once:true});
-        v.load();
-      }
-
-      const playObserver=new IntersectionObserver(entries=>{
-        entries.forEach(({target,isIntersecting})=>{
-          if(isIntersecting){ activateVideo(target); target.play().catch(()=>{}); }
-          else target.pause();
-        });
-      },{threshold:0.25});
-
-      videos.slice(0,BATCH).forEach(v=>{ activateVideo(v); playObserver.observe(v); });
-
-      let nextIndex=BATCH;
-      function loadNextBatch(){
-        const start=nextIndex, end=Math.min(start+BATCH,cards.length);
-        for(let i=start;i<end;i++){
-          const card=cards[i]; const vid=card.querySelector('video');
-          card.classList.remove('deferred'); activateVideo(vid); playObserver.observe(vid);
         }
-        nextIndex=end; if(nextIndex>=cards.length) io.disconnect();
-      }
-
-      const sentinel=document.getElementById('feed-sentinel');
-      const io=new IntersectionObserver(es=>{ es.forEach(e=>{ if(e.isIntersecting) loadNextBatch(); }); },{root:null,rootMargin:'400px 0px'});
-      io.observe(sentinel);
-
-      function openCalendar(){
-        const w=window.open(CAL_URL,'_blank');
-        if(!w){ try{ parent.postMessage({type:'openExternal',url:CAL_URL},'*'); }catch(e){} }
-      }
-      document.querySelectorAll('.sound-btn').forEach(btn=>{
-        btn.addEventListener('click',e=>{ e.stopPropagation(); openCalendar(); });
       });
-      videos.forEach(v=>v.addEventListener('click',openCalendar));
+
+      function openCalendar() {
+        const w = window.open(CAL_URL, "_blank");
+        if (!w) {
+          try {
+            parent.postMessage({ type: "openExternal", url: CAL_URL }, "*");
+          } catch (e) {}
+        }
+      }
+
+      const extLinks = document.querySelectorAll('.tag a');
+      extLinks.forEach(a => {
+        a.addEventListener('click', (e) => {
+          const w = window.open(a.href, '_blank');
+          if (!w) {
+            e.preventDefault();
+            try {
+              parent.postMessage({ type: 'openExternal', url: a.href }, '*');
+            } catch (e) {}
+          }
+        });
+      });
+
+      function sendHeight() {
+        const height = document.body.scrollHeight;
+        try {
+          parent.postMessage({ type: "adjustHeight", height }, "*");
+        } catch (e) {}
+      }
+
+      window.addEventListener("load", sendHeight);
+      window.addEventListener("resize", sendHeight);
+      new MutationObserver(sendHeight).observe(document.body, { childList: true, subtree: true });
     });
   </script>
 </body>
