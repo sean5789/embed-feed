@@ -1,4 +1,3 @@
-// generate-static-feed.js
 require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
@@ -6,59 +5,60 @@ const axios = require('axios');
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
 
+function esc(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function mediaHtml(p) {
+  // Prefer video if present, otherwise image/thumbnail
+  if (p?.video?.source) {
+    return `
+      <div class="video-wrapper">
+        <video src="${esc(p.video.source)}" autoplay muted loop playsinline preload="auto"></video>
+        <button class="sound-btn" title="Ouvrir le calendrier"></button>
+      </div>
+    `;
+  }
+  const imgSrc = p.image || p.thumbnail || '';
+  return `<img src="${esc(imgSrc)}" alt="post">`;
+}
+
 async function generateStaticFeed() {
   try {
     if (!API_KEY) {
-      console.error('❌ Missing EMBEDSOCIAL_API_KEY in your .env');
-      process.exit(1);
+      throw new Error('La variable d’environnement EMBEDSOCIAL_API_KEY est manquante.');
     }
 
     console.log('📱 Connexion à l’API EmbedSocial...');
 
-    const url = `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${ALBUM_REF}`;
+    const url = `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${encodeURIComponent(ALBUM_REF)}`;
     const res = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${API_KEY}`,
         Accept: 'application/json',
       },
-      // Optional: increase timeout if the album is large
       timeout: 20000,
     });
 
-    const posts = res?.data?.data ?? [];
-    if (!Array.isArray(posts)) {
-      console.error('❌ Format inattendu');
-      return;
-    }
-
+    const posts = Array.isArray(res?.data?.data) ? res.data.data : [];
     console.log(`✅ ${posts.length} posts récupérés`);
 
     const cardsHtml = posts
       .map((p) => {
-        const dateStr = p.created_on
-          ? new Date(p.created_on).toLocaleDateString('fr-FR')
-          : '';
-
-        const imgSrc = p.image || p.thumbnail || '';
-        const vidSrc = p.video && p.video.source ? p.video.source : null;
-
-        const media = vidSrc
-          ? `
-          <div class="video-wrapper">
-            <video src="${vidSrc}" autoplay muted loop playsinline preload="auto"></video>
-            <button class="sound-btn" title="Ouvrir le calendrier"></button>
-          </div>
-        `
-          : `
-          <img src="${imgSrc}" alt="post" loading="lazy">
-        `;
+        const dateStr = p?.created_on ? new Date(p.created_on).toLocaleDateString('fr-FR') : '';
+        const media = mediaHtml(p);
 
         return `
           <div class="card">
             ${media}
             <div class="info">
               <div class="emoji">🥳</div>
-              <div class="date">${dateStr || 'En 2025'} 🌍</div>
+              <div class="date">${esc(dateStr || 'En 2025')} 🌍</div>
               <div class="tag">
                 <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
               </div>
@@ -78,36 +78,16 @@ async function generateStaticFeed() {
   <link rel="preconnect" href="https://embedsocial.com">
   <link rel="dns-prefetch" href="https://embedsocial.com">
   <style>
-    html, body {
-      margin: 0; padding: 0; background: #fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      overflow: hidden; -ms-overflow-style: none; scrollbar-width: none;
-    }
+    html, body { margin: 0; padding: 0; background: #fff; font-family: sans-serif; overflow: hidden; -ms-overflow-style: none; scrollbar-width: none; }
     body::-webkit-scrollbar { display: none; }
-
-    .grid {
-      display: flex; overflow-x: auto; gap: 14px; padding: 0 10px; scroll-behavior: smooth; box-sizing: border-box;
-      margin-bottom: 0; scrollbar-width: none; -ms-overflow-style: none;
-    }
+    .grid { display: flex; overflow-x: auto; gap: 14px; padding: 0 10px; scroll-behavior: smooth; box-sizing: border-box; margin-bottom: 0; scrollbar-width: none; -ms-overflow-style: none; }
     .grid::-webkit-scrollbar { display: none; }
-
-    .card {
-      flex: 0 0 auto; width: 165px; scroll-snap-align: start; background: #fff; border-radius: 16px;
-      overflow: hidden; margin: 0; padding: 0; border: 1px solid rgba(0,0,0,0.06);
-    }
-
-    .video-wrapper { position: relative; background: #000; }
-    video, img { width: 100%; display: block; }
-    video { opacity: 0; transition: opacity 0.8s ease-in-out; }
+    .card { flex: 0 0 auto; width: 165px; scroll-snap-align: start; background: white; border-radius: 16px; overflow: hidden; margin: 0; padding: 0; }
+    .video-wrapper { position: relative; }
+    video { width: 100%; display: block; opacity: 0; transition: opacity 0.8s ease-in-out; }
     video.loaded { opacity: 1; }
-
-    .sound-btn {
-      position: absolute; bottom: 10px; right: 6px; width: 26px; height: 26px;
-      background: rgba(0,0,0,0.6); border: none; border-radius: 50%; cursor: pointer;
-      background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat: no-repeat; background-position: center; background-size: 60%; transition: opacity 0.3s ease;
-    }
-
-    .info { padding: 6px 10px 8px; text-align: center; margin-bottom: 0; }
+    .sound-btn { position: absolute; bottom: 10px; right: 6px; width: 26px; height: 26px; background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%; cursor: pointer; background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>'); background-repeat: no-repeat; background-position: center; background-size: 60%; transition: opacity 0.3s ease; }
+    .info { padding: 6px 10px 2px; text-align: center; margin-bottom: 0; }
     .emoji { font-size: 24px; }
     .date { font-size: 15px; color: #444; font-weight: bold; }
     .tag { margin-top: 6px; display: inline-block; }
@@ -129,7 +109,9 @@ async function generateStaticFeed() {
         video.addEventListener("loadeddata", () => {
           video.classList.add("loaded");
         });
+
         video.addEventListener("click", () => openCalendar());
+
         if (buttons[i]) {
           buttons[i].addEventListener("click", (e) => {
             e.stopPropagation();
@@ -139,7 +121,7 @@ async function generateStaticFeed() {
       });
 
       function openCalendar() {
-        const w = window.open(CAL_URL, "_blank");
+        const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
         if (!w) {
           try {
             parent.postMessage({ type: "openExternal", url: CAL_URL }, "*");
@@ -150,12 +132,12 @@ async function generateStaticFeed() {
       const extLinks = document.querySelectorAll('.tag a');
       extLinks.forEach(a => {
         a.addEventListener('click', (e) => {
-          const w = window.open(a.href, '_blank');
+          const w = window.open(a.href, '_blank', 'noopener,noreferrer');
           if (!w) {
             e.preventDefault();
             try {
               parent.postMessage({ type: 'openExternal', url: a.href }, '*');
-            } catch (e) {}
+            } catch (e2) {}
           }
         });
       });
@@ -175,7 +157,7 @@ async function generateStaticFeed() {
 </body>
 </html>`;
 
-    fs.writeFileSync('index.html', html, 'utf-8');
+    fs.writeFileSync('index.html', html, 'utf8');
     console.log('✅ index.html généré avec succès.');
   } catch (error) {
     console.error('❌ Erreur :', error?.response?.data || error.message);
