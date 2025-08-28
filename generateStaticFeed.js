@@ -54,7 +54,13 @@ async function generateStaticFeed() {
     video, img { width: 100%; display: block; object-fit: cover; }
     video { opacity: 0; transition: opacity 0.5s ease-in-out; }
     video.loaded { opacity: 1; }
-    .sound-btn { position: absolute; bottom: 10px; right: 6px; width: 26px; height: 26px; background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%; cursor: pointer; }
+    .sound-btn {
+      position: absolute; bottom: 10px; right: 6px; width: 26px; height: 26px;
+      background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%; cursor: pointer;
+      background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+      background-repeat: no-repeat; background-position: center; background-size: 60%;
+      transition: opacity 0.3s ease;
+    }
     .info { padding: 6px 10px 2px; text-align: center; }
     .emoji { font-size: 24px; }
     .date { font-size: 15px; color: #444; font-weight: bold; }
@@ -69,6 +75,7 @@ async function generateStaticFeed() {
     const posts = ${JSON.stringify(postsForClient)};
     const FEED = document.getElementById('feed');
     const BATCH_SIZE = 5;
+    const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
     let index = 0;
 
     function createCard(p) {
@@ -90,19 +97,39 @@ async function generateStaticFeed() {
             <div class="emoji">🥳</div>
             <div class="date">In 2025 ! 🌍</div>
             <div class="tag">
-              <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a>
             </div>
           </div>
         </div>\`;
     }
 
     function wireUpVideos() {
-      FEED.querySelectorAll("video").forEach(v => {
-        if (!v.classList.contains("wired")) {
-          v.addEventListener("loadeddata", () => v.classList.add("loaded"));
-          v.classList.add("wired");
+      FEED.querySelectorAll(".card").forEach(card => {
+        if (!card.classList.contains("wired")) {
+          card.classList.add("wired");
+
+          const v = card.querySelector("video");
+          const btn = card.querySelector(".sound-btn");
+
+          if (v) {
+            v.addEventListener("loadeddata", () => v.classList.add("loaded"));
+            v.addEventListener("click", () => openCalendar());
+          }
+          if (btn) {
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              openCalendar();
+            });
+          }
         }
       });
+    }
+
+    function openCalendar() {
+      const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
+      if (!w) {
+        try { parent.postMessage({ type: "openExternal", url: CAL_URL }, "*"); } catch (_){}
+      }
     }
 
     function loadNextBatch() {
@@ -125,15 +152,11 @@ async function generateStaticFeed() {
     // 🔄 relancer les vidéos quand on revient dans l'app/onglet
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
-        document.querySelectorAll("video").forEach(v => {
-          v.play().catch(()=>{});
-        });
+        document.querySelectorAll("video").forEach(v => v.play().catch(()=>{}));
       }
     });
     window.addEventListener("pageshow", () => {
-      document.querySelectorAll("video").forEach(v => {
-        v.play().catch(()=>{});
-      });
+      document.querySelectorAll("video").forEach(v => v.play().catch(()=>{}));
     });
   </script>
 </body>
@@ -147,3 +170,4 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
