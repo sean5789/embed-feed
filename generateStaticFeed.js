@@ -15,7 +15,7 @@ function esc(str = '') {
 }
 
 function mediaHtml(p) {
-  // Prefer video if present, otherwise image/thumbnail
+  // Préfère la vidéo si présente, sinon image/thumbnail
   if (p?.video?.source) {
     return `
       <div class="video-wrapper">
@@ -50,7 +50,6 @@ async function generateStaticFeed() {
 
     const cardsHtml = posts
       .map((p) => {
-        const dateStr = p?.created_on ? new Date(p.created_on).toLocaleDateString('fr-FR') : '';
         const media = mediaHtml(p);
 
         return `
@@ -58,7 +57,7 @@ async function generateStaticFeed() {
             ${media}
             <div class="info">
               <div class="emoji">🥳</div>
-              <div class="date">${esc(dateStr || 'En 2025')} 🌍</div>
+              <div class="date">In 2025 ! 🌍</div>
               <div class="tag">
                 <a href="https://www.theushuaiaexperience.com/en/club/calendar" target="_blank" rel="noopener noreferrer">🥳➡️</a>
               </div>
