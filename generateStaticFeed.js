@@ -124,7 +124,7 @@
       </div>
       <div class="info">
         <div class="emoji">🔥</div>
-        <div class="date">Summer 2025</div>
+        <div class="date">In 2025 ! 🌍</div>
         <div class="tag">
           <a href="https://www.theushuaiaexperience.com/en/club/calendar"
              target="_blank" rel="noopener noreferrer">🔥➡️</a>
@@ -142,8 +142,12 @@
   document.addEventListener("DOMContentLoaded", function () {
     const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
     const BATCH = 5; // nombre de vidéos par lot
-    const cards = Array.from(document.querySelectorAll(".card"));
+    const cards  = Array.from(document.querySelectorAll(".card"));
     const videos = Array.from(document.querySelectorAll("video"));
+
+    // 🔁 Forcer la date fixe pour toutes les cartes
+    const DATE_LABEL = "In 2025 ! 🌍";
+    document.querySelectorAll(".date").forEach(el => { el.textContent = DATE_LABEL; });
 
     // mettre les vidéos en lazy (src -> data-src)
     videos.forEach(v => {
@@ -177,7 +181,9 @@
       const end = Math.min(start+BATCH, cards.length);
       for (let i=start; i<end; i++){
         const card = cards[i];
-        const vid = card.querySelector("video");
+        const vid  = card.querySelector("video");
+        const dateEl = card.querySelector(".date");
+        if (dateEl) dateEl.textContent = DATE_LABEL;
         card.classList.remove("deferred");
         activateVideo(vid);
         playObserver.observe(vid);
