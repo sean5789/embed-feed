@@ -1,30 +1,30 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Flux EmbedSocial</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    html, body { margin: 0; padding: 0; background: #fff; font-family: sans-serif; }
-    .grid { display: flex; overflow-x: auto; gap: 14px; padding: 10px; scroll-behavior: smooth; }
-    .grid::-webkit-scrollbar { display: none; }
-    .card { flex: 0 0 auto; width: 165px; background: white; border-radius: 16px; overflow: hidden; }
-    .video-wrapper { position: relative; width: 100%; }
-    video, img { width: 100%; display: block; object-fit: cover; }
-    video { opacity: 0; transition: opacity 0.5s ease-in-out; }
-    video.loaded { opacity: 1; }
+    html, body { margin:0; padding:0; background:#fff; font-family:sans-serif; }
+    .grid { display:flex; overflow-x:auto; gap:14px; padding:10px; scroll-behavior:smooth; }
+    .grid::-webkit-scrollbar { display:none; }
+    .card { flex:0 0 auto; width:165px; background:#fff; border-radius:16px; overflow:hidden; }
+    .video-wrapper { position:relative; width:100%; }
+    video, img { width:100%; display:block; object-fit:cover; }
+    video { opacity:0; transition:opacity .4s ease-in-out; }
+    video.loaded { opacity:1; }
     .sound-btn {
-      position: absolute; bottom: 10px; right: 6px; width: 26px; height: 26px;
-      background: rgba(0, 0, 0, 0.6); border: none; border-radius: 50%; cursor: pointer;
-      background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat: no-repeat; background-position: center; background-size: 60%;
-      transition: opacity 0.3s ease;
+      position:absolute; bottom:10px; right:6px; width:26px; height:26px;
+      background:rgba(0,0,0,.6); border:none; border-radius:50%; cursor:pointer;
+      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+      background-repeat:no-repeat; background-position:center; background-size:60%;
+      transition:opacity .3s ease;
     }
-    .info { padding: 6px 10px 2px; text-align: center; }
-    .emoji { font-size: 24px; }
-    .date { font-size: 15px; color: #444; font-weight: bold; }
-    .tag { margin-top: 6px; display: inline-block; }
-    .tag a { color: inherit; text-decoration: none; display: inline-block; background: yellow; font-weight: bold; padding: 6px; border-radius: 6px; }
+    .info { padding:6px 10px 2px; text-align:center; }
+    .emoji { font-size:24px; }
+    .date { font-size:15px; color:#444; font-weight:bold; }
+    .tag { margin-top:6px; display:inline-block; }
+    .tag a { color:inherit; text-decoration:none; display:inline-block; background:yellow; font-weight:bold; padding:6px; border-radius:6px; }
   </style>
 </head>
 <body>
@@ -33,20 +33,22 @@
   <script>
     const posts = [{"video":"https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/17874/17874006954383195/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17874/17874006954383195/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17874/17874006954383195/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18276/18276660490284988/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18276/18276660490284988/image_0.jpeg","source_webp":null,"type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/17904/17904133209206356/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17904/17904133209206356/image_0.jpeg","source_webp":null,"type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18090/18090082702712245/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18090/18090082702712245/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18090/18090082702712245/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/17908/17908929222168305/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17908/17908929222168305/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17908/17908929222168305/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18070/18070960315998638/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18070/18070960315998638/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18070/18070960315998638/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/17880/17880672516220785/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17880/17880672516220785/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17880/17880672516220785/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/17926/17926257510065190/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17926/17926257510065190/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17926/17926257510065190/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072032663503864/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072032663503864/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072032663503864/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18018/18018624464714498/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18018/18018624464714498/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18018/18018624464714498/image_0.webp","type":"image","altText":null}}];
     const FEED = document.getElementById('feed');
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 5;                 // 👈 5 éléments par chargement
     const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
     let index = 0;
+    let loading = false;
 
     function createCard(p) {
       const media = p.video
         ? `
           <div class="video-wrapper">
-            <video src="${p.video}" autoplay muted loop playsinline preload="auto"></video>
+            <!-- Lazy: pas de src, juste data-src + preload=none -->
+            <video data-src="${p.video}" muted loop playsinline preload="none"></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>`
         : `
           <div class="video-wrapper">
-            <img src="${p.image}" alt="post">
+            <img src="${p.image}" alt="post" loading="lazy">
           </div>`;
 
       return `
@@ -55,60 +57,71 @@
           <div class="info">
             <div class="emoji">🥳</div>
             <div class="date">In 2025 ! ✈️🌍</div>
-            <div class="tag">
-              <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a>
-            </div>
+            <div class="tag"><a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
           </div>
         </div>`;
     }
 
-    function wireUpVideos() {
-      FEED.querySelectorAll(".card").forEach(card => {
-        if (!card.classList.contains("wired")) {
-          card.classList.add("wired");
+    function openCalendar() {
+      const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
+      if (!w) { try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_){} }
+    }
 
-          const v = card.querySelector("video");
-          const btn = card.querySelector(".sound-btn");
+    // Observer: définit le src réel uniquement quand la vidéo est visible
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        const v = e.target;
+        if (e.isIntersecting && !v.src && v.dataset.src) {
+          v.src = v.dataset.src;
+          v.load();
+          v.play().catch(()=>{});
+          v.addEventListener("loadeddata", () => v.classList.add("loaded"), { once:true });
+          io.unobserve(v);
+        }
+      });
+    }, { root: FEED, rootMargin: "200px", threshold: 0.01 });
 
-          if (v) {
-            v.addEventListener("loadeddata", () => v.classList.add("loaded"));
-            v.addEventListener("click", () => openCalendar());
-          }
-          if (btn) {
-            btn.addEventListener("click", (e) => {
-              e.stopPropagation();
-              openCalendar();
-            });
-          }
+    function wireUpNewCards() {
+      // vidéos lazy
+      FEED.querySelectorAll("video").forEach(v => {
+        if (!v.dataset.observed) {
+          v.dataset.observed = "1";
+          io.observe(v);
+          // clic sur la vidéo = ouvrir calendrier
+          v.addEventListener("click", openCalendar);
+        }
+      });
+      // boutons
+      FEED.querySelectorAll(".sound-btn").forEach(btn => {
+        if (!btn.dataset.wired) {
+          btn.dataset.wired = "1";
+          btn.addEventListener("click", (e) => { e.stopPropagation(); openCalendar(); });
         }
       });
     }
 
-    function openCalendar() {
-      const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
-      if (!w) {
-        try { parent.postMessage({ type: "openExternal", url: CAL_URL }, "*"); } catch (_){}
+    function loadNextBatch() {
+      const slice = posts.slice(index, index + BATCH_SIZE);
+      slice.forEach(p => FEED.insertAdjacentHTML("beforeend", createCard(p)));
+      index += slice.length;
+      wireUpNewCards();
+    }
+
+    function maybeLoadMore() {
+      if (loading || index >= posts.length) return;
+      if (FEED.scrollLeft + FEED.clientWidth >= FEED.scrollWidth - 5) {
+        loading = true;
+        requestAnimationFrame(() => { loadNextBatch(); loading = false; });
       }
     }
 
-    function loadNextBatch() {
-      const slice = posts.slice(index, index+BATCH_SIZE);
-      slice.forEach(p => FEED.insertAdjacentHTML('beforeend', createCard(p)));
-      index += slice.length;
-      wireUpVideos();
-    }
-
-    // charger les 5 premiers
+    // 🔹 Charger uniquement les 5 premiers au départ
     loadNextBatch();
 
-    // charger 5 de plus au bout du scroll
-    FEED.addEventListener('scroll', () => {
-      if (FEED.scrollLeft + FEED.clientWidth >= FEED.scrollWidth - 5) {
-        if (index < posts.length) loadNextBatch();
-      }
-    });
+    // 🔹 Charger par batch de 5 quand on arrive au bout du scroll horizontal
+    FEED.addEventListener("scroll", maybeLoadMore);
 
-    // 🔄 relancer les vidéos quand on revient dans l'app/onglet
+    // 🔄 Rejouer les vidéos quand on revient sur l’onglet
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         document.querySelectorAll("video").forEach(v => v.play().catch(()=>{}));
