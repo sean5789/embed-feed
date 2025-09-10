@@ -33,7 +33,7 @@ async function generateStaticFeed() {
         <div class="video-wrapper">
           ${
             post.video
-              ? `<video src="${post.video}" autoplay muted loop playsinline></video>
+              ? `<video src="${post.video}" autoplay muted loop playsinline loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
               : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
@@ -123,7 +123,7 @@ async function generateStaticFeed() {
       const media = post.video
         ? \`
           <div class="video-wrapper">
-            <video src="\${post.video}" autoplay muted loop playsinline></video>
+            <video src="\${post.video}" autoplay muted loop playsinline loading="lazy"></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>\`
         : \`
@@ -148,7 +148,7 @@ async function generateStaticFeed() {
       const btn = document.getElementById("show-more-btn");
 
       slice.forEach(post => {
-        feed.insertAdjacentHTML("beforeend", createCard(post));
+        btn.insertAdjacentHTML("beforebegin", createCard(post));
       });
 
       currentIndex += BATCH_SIZE;
@@ -191,4 +191,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 

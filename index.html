@@ -53,7 +53,7 @@
     
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4" autoplay muted loop playsinline></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4" autoplay muted loop playsinline loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -66,7 +66,7 @@
 
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/video.mp4" autoplay muted loop playsinline></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/video.mp4" autoplay muted loop playsinline loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -79,7 +79,7 @@
 
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/video.mp4" autoplay muted loop playsinline></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/video.mp4" autoplay muted loop playsinline loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -92,7 +92,7 @@
 
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/video.mp4" autoplay muted loop playsinline></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/video.mp4" autoplay muted loop playsinline loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -105,7 +105,7 @@
 
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/video.mp4" autoplay muted loop playsinline></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/video.mp4" autoplay muted loop playsinline loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -137,7 +137,7 @@
       const media = post.video
         ? `
           <div class="video-wrapper">
-            <video src="${post.video}" autoplay muted loop playsinline></video>
+            <video src="${post.video}" autoplay muted loop playsinline loading="lazy"></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>`
         : `
@@ -162,7 +162,7 @@
       const btn = document.getElementById("show-more-btn");
 
       slice.forEach(post => {
-        feed.insertAdjacentHTML("beforeend", createCard(post));
+        btn.insertAdjacentHTML("beforebegin", createCard(post));
       });
 
       currentIndex += BATCH_SIZE;
