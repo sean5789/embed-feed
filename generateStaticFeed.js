@@ -7,6 +7,7 @@ const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
 const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
 const OUTPUT_FILE = 'index.html';
+const BATCH_SIZE = 5;
 
 async function generateStaticFeed() {
   try {
@@ -28,7 +29,7 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    const firstFive = postsForClient.slice(0, 5).map(post => `
+    const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
           ${
@@ -46,23 +47,7 @@ async function generateStaticFeed() {
       </div>
     `).join("\n");
 
-    const extraPosts = postsForClient.slice(5).map(post => `
-      <div class="card hidden">
-        <div class="video-wrapper">
-          ${
-            post.video
-              ? `<video src="${post.video}" autoplay muted loop playsinline></video>
-                 <button class="sound-btn" title="Ouvrir le calendrier"></button>`
-              : `<img src="${post.image}" alt="post" loading="lazy" />`
-          }
-        </div>
-        <div class="info">
-          <div class="emoji">🥳</div>
-          <div class="date">In 2025 ! ✈️🌍</div>
-          <div class="tag"><a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
-        </div>
-      </div>
-    `).join("\n");
+    const postsJSON = JSON.stringify(postsForClient.slice(BATCH_SIZE));
 
     const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -103,7 +88,6 @@ async function generateStaticFeed() {
       padding:6px;
       border-radius:6px;
     }
-
     .show-more-card {
       display:flex;
       align-items:center;
@@ -113,24 +97,21 @@ async function generateStaticFeed() {
       height:100%;
       cursor:pointer;
     }
-
-    .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="grid" id="feed">
-    ${firstFive}
-
-    <!-- Carte bouton ➕ -->
+    ${firstBatch}
     <div class="card" id="show-more-btn">
       <div class="show-more-card" onclick="showMore()">➕</div>
     </div>
-
-    ${extraPosts}
   </div>
 
   <script>
     const CAL_URL = "${CAL_URL}";
+    const BATCH_SIZE = ${BATCH_SIZE};
+    const remainingPosts = ${postsJSON};
+    let currentIndex = 0;
 
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
@@ -139,23 +120,68 @@ async function generateStaticFeed() {
       }
     }
 
-    document.querySelectorAll("video").forEach(v => {
-      v.addEventListener("click", openCalendar);
-    });
+    function createCard(post) {
+      const media = post.video
+        ? \`
+          <div class="video-wrapper">
+            <video src="\${post.video}" autoplay muted loop playsinline></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
+          </div>\`
+        : \`
+          <div class="video-wrapper">
+            <img src="\${post.image}" alt="post" loading="lazy" />
+          </div>\`;
 
-    document.querySelectorAll(".sound-btn").forEach(btn => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openCalendar();
-      });
-    });
+      return \`
+        <div class="card">
+          \${media}
+          <div class="info">
+            <div class="emoji">🥳</div>
+            <div class="date">In 2025 ! ✈️🌍</div>
+            <div class="tag"><a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
+          </div>
+        </div>\`;
+    }
 
     function showMore() {
-      document.querySelectorAll(".card.hidden").forEach(el => {
-        el.classList.remove("hidden");
+      const slice = remainingPosts.slice(currentIndex, currentIndex + BATCH_SIZE);
+      const feed = document.getElementById("feed");
+      const btn = document.getElementById("show-more-btn");
+
+      slice.forEach(post => {
+        const card = document.createElement("div");
+        card.outerHTML = createCard(post);
+        feed.insertAdjacentHTML("beforeend", createCard(post));
       });
-      document.getElementById("show-more-btn").style.display = "none";
+
+      currentIndex += BATCH_SIZE;
+
+      if (currentIndex >= remainingPosts.length) {
+        btn.style.display = "none";
+      }
+
+      wireUpButtons();
     }
+
+    function wireUpButtons() {
+      document.querySelectorAll("video").forEach(v => {
+        if (!v.dataset.bound) {
+          v.dataset.bound = "1";
+          v.addEventListener("click", openCalendar);
+        }
+      });
+      document.querySelectorAll(".sound-btn").forEach(btn => {
+        if (!btn.dataset.bound) {
+          btn.dataset.bound = "1";
+          btn.addEventListener("click", e => {
+            e.stopPropagation();
+            openCalendar();
+          });
+        }
+      });
+    }
+
+    wireUpButtons();
   </script>
 </body>
 </html>`;
@@ -168,4 +194,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
