@@ -28,7 +28,7 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    const firstFive = postsForClient.slice(0, 5).map((post, i) => `
+    const firstFive = postsForClient.slice(0, 5).map(post => `
       <div class="card">
         <div class="video-wrapper">
           ${
@@ -46,7 +46,7 @@ async function generateStaticFeed() {
       </div>
     `).join("\n");
 
-    const extraPosts = postsForClient.slice(5).map((post, i) => `
+    const extraPosts = postsForClient.slice(5).map(post => `
       <div class="card hidden">
         <div class="video-wrapper">
           ${
@@ -74,7 +74,14 @@ async function generateStaticFeed() {
     html, body { margin:0; padding:0; background:#fff; font-family:sans-serif; }
     .grid { display:flex; overflow-x:auto; gap:14px; padding:10px; scroll-behavior:smooth; }
     .grid::-webkit-scrollbar { display:none; }
-    .card { flex:0 0 auto; width:165px; background:#fff; border-radius:16px; overflow:hidden; }
+    .card {
+      flex:0 0 auto;
+      width:165px;
+      background:#fff;
+      border-radius:16px;
+      overflow:hidden;
+      text-align:center;
+    }
     .video-wrapper { position:relative; width:100%; }
     video, img { width:100%; display:block; object-fit:cover; }
     .sound-btn {
@@ -82,7 +89,6 @@ async function generateStaticFeed() {
       background:rgba(0,0,0,.6); border:none; border-radius:50%; cursor:pointer;
       background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
       background-repeat:no-repeat; background-position:center; background-size:60%;
-      transition:opacity .3s ease;
     }
     .info { padding:6px 10px 2px; text-align:center; }
     .emoji { font-size:24px; }
@@ -98,16 +104,14 @@ async function generateStaticFeed() {
       border-radius:6px;
     }
 
-    .show-more-wrapper {
-      display:flex; align-items:center; justify-content:center; padding:20px;
-    }
-    .show-more-btn {
-      font-size: 32px;
-      background: yellow;
-      padding: 10px 14px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
+    .show-more-card {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:28px;
+      background:yellow;
+      height:100%;
+      cursor:pointer;
     }
 
     .hidden { display: none; }
@@ -116,10 +120,13 @@ async function generateStaticFeed() {
 <body>
   <div class="grid" id="feed">
     ${firstFive}
+
+    <!-- Carte bouton ➕ -->
+    <div class="card" id="show-more-btn">
+      <div class="show-more-card" onclick="showMore()">➕</div>
+    </div>
+
     ${extraPosts}
-  </div>
-  <div class="show-more-wrapper">
-    <button class="show-more-btn" onclick="showMore()">➕</button>
   </div>
 
   <script>
@@ -147,7 +154,7 @@ async function generateStaticFeed() {
       document.querySelectorAll(".card.hidden").forEach(el => {
         el.classList.remove("hidden");
       });
-      document.querySelector(".show-more-wrapper").style.display = "none";
+      document.getElementById("show-more-btn").style.display = "none";
     }
   </script>
 </body>
