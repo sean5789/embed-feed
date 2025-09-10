@@ -5,13 +5,15 @@ const axios = require('axios');
 
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
+const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
+const OUTPUT_FILE = 'index.html';
 
 async function generateStaticFeed() {
   try {
-    if (!API_KEY) throw new Error('La variable d’environnement EMBEDSOCIAL_API_KEY est manquante.');
+    if (!API_KEY) throw new Error('❌ EMBEDSOCIAL_API_KEY est manquant.');
 
-    console.log('📱 Connexion à l’API EmbedSocial...');
-    const url = `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${encodeURIComponent(ALBUM_REF)}`;
+    console.log('📡 Connexion à l’API EmbedSocial...');
+    const url = `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${ALBUM_REF}`;
 
     const res = await axios.get(url, {
       headers: { Authorization: `Bearer ${API_KEY}`, Accept: 'application/json' },
@@ -21,11 +23,28 @@ async function generateStaticFeed() {
     const posts = Array.isArray(res?.data?.data) ? res.data.data : [];
     console.log(`✅ ${posts.length} posts récupérés`);
 
-    // On ne met QUE les champs nécessaires côté client
     const postsForClient = posts.map(p => ({
       video: p?.video?.source || null,
       image: p.image || p.thumbnail || '',
     }));
+
+    const cardsHTML = postsForClient.slice(0, 5).map(post => `
+      <div class="card">
+        <div class="video-wrapper">
+          ${
+            post.video
+              ? `<video src="${post.video}" autoplay muted loop playsinline></video>
+                 <button class="sound-btn" title="Ouvrir le calendrier"></button>`
+              : `<img src="${post.image}" alt="post" loading="lazy" />`
+          }
+        </div>
+        <div class="info">
+          <div class="emoji">🥳</div>
+          <div class="date">In 2025 ! ✈️🌍</div>
+          <div class="tag"><a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
+        </div>
+      </div>
+    `).join("\n");
 
     const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -40,8 +59,6 @@ async function generateStaticFeed() {
     .card { flex:0 0 auto; width:165px; background:#fff; border-radius:16px; overflow:hidden; }
     .video-wrapper { position:relative; width:100%; }
     video, img { width:100%; display:block; object-fit:cover; }
-    video { opacity:0; transition:opacity .4s ease-in-out; }
-    video.loaded { opacity:1; }
     .sound-btn {
       position:absolute; bottom:10px; right:6px; width:26px; height:26px;
       background:rgba(0,0,0,.6); border:none; border-radius:50%; cursor:pointer;
@@ -57,114 +74,35 @@ async function generateStaticFeed() {
   </style>
 </head>
 <body>
-  <div class="grid" id="feed"></div>
+  <div class="grid" id="feed">
+    ${cardsHTML}
+  </div>
 
   <script>
-    const posts = ${JSON.stringify(postsForClient)};
-    const FEED = document.getElementById('feed');
-    const BATCH_SIZE = 5;                 // 👈 5 éléments par chargement
-    const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
-    let index = 0;
-    let loading = false;
-
-    function createCard(p) {
-      const media = p.video
-        ? \`
-          <div class="video-wrapper">
-            <!-- Lazy: pas de src, juste data-src + preload=none -->
-            <video data-src="\${p.video}" muted loop playsinline preload="none"></video>
-            <button class="sound-btn" title="Ouvrir le calendrier"></button>
-          </div>\`
-        : \`
-          <div class="video-wrapper">
-            <img src="\${p.image}" alt="post" loading="lazy">
-          </div>\`;
-
-      return \`
-        <div class="card">
-          \${media}
-          <div class="info">
-            <div class="emoji">🥳</div>
-            <div class="date">In 2025 ! ✈️🌍</div>
-            <div class="tag"><a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
-          </div>
-        </div>\`;
-    }
-
+    const CAL_URL = "${CAL_URL}";
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
-      if (!w) { try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_){} }
-    }
-
-    // Observer: définit le src réel uniquement quand la vidéo est visible
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        const v = e.target;
-        if (e.isIntersecting && !v.src && v.dataset.src) {
-          v.src = v.dataset.src;
-          v.load();
-          v.play().catch(()=>{});
-          v.addEventListener("loadeddata", () => v.classList.add("loaded"), { once:true });
-          io.unobserve(v);
-        }
-      });
-    }, { root: FEED, rootMargin: "200px", threshold: 0.01 });
-
-    function wireUpNewCards() {
-      // vidéos lazy
-      FEED.querySelectorAll("video").forEach(v => {
-        if (!v.dataset.observed) {
-          v.dataset.observed = "1";
-          io.observe(v);
-          // clic sur la vidéo = ouvrir calendrier
-          v.addEventListener("click", openCalendar);
-        }
-      });
-      // boutons
-      FEED.querySelectorAll(".sound-btn").forEach(btn => {
-        if (!btn.dataset.wired) {
-          btn.dataset.wired = "1";
-          btn.addEventListener("click", (e) => { e.stopPropagation(); openCalendar(); });
-        }
-      });
-    }
-
-    function loadNextBatch() {
-      const slice = posts.slice(index, index + BATCH_SIZE);
-      slice.forEach(p => FEED.insertAdjacentHTML("beforeend", createCard(p)));
-      index += slice.length;
-      wireUpNewCards();
-    }
-
-    function maybeLoadMore() {
-      if (loading || index >= posts.length) return;
-      if (FEED.scrollLeft + FEED.clientWidth >= FEED.scrollWidth - 5) {
-        loading = true;
-        requestAnimationFrame(() => { loadNextBatch(); loading = false; });
+      if (!w) {
+        try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_) {}
       }
     }
 
-    // 🔹 Charger uniquement les 5 premiers au départ
-    loadNextBatch();
-
-    // 🔹 Charger par batch de 5 quand on arrive au bout du scroll horizontal
-    FEED.addEventListener("scroll", maybeLoadMore);
-
-    // 🔄 Rejouer les vidéos quand on revient sur l’onglet
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        document.querySelectorAll("video").forEach(v => v.play().catch(()=>{}));
-      }
+    document.querySelectorAll("video").forEach(v => {
+      v.addEventListener("click", openCalendar);
     });
-    window.addEventListener("pageshow", () => {
-      document.querySelectorAll("video").forEach(v => v.play().catch(()=>{}));
+
+    document.querySelectorAll(".sound-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openCalendar();
+      });
     });
   </script>
 </body>
 </html>`;
 
-    fs.writeFileSync('index.html', html, 'utf8');
-    console.log('✅ index.html généré avec succès.');
+    fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
+    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
     console.error('❌ Erreur :', err?.response?.data || err.message);
   }
