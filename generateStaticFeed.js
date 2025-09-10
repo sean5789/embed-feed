@@ -28,8 +28,26 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    const cardsHTML = postsForClient.slice(0, 5).map(post => `
+    const firstFive = postsForClient.slice(0, 5).map((post, i) => `
       <div class="card">
+        <div class="video-wrapper">
+          ${
+            post.video
+              ? `<video src="${post.video}" autoplay muted loop playsinline></video>
+                 <button class="sound-btn" title="Ouvrir le calendrier"></button>`
+              : `<img src="${post.image}" alt="post" loading="lazy" />`
+          }
+        </div>
+        <div class="info">
+          <div class="emoji">🥳</div>
+          <div class="date">In 2025 ! ✈️🌍</div>
+          <div class="tag"><a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
+        </div>
+      </div>
+    `).join("\n");
+
+    const extraPosts = postsForClient.slice(5).map((post, i) => `
+      <div class="card hidden">
         <div class="video-wrapper">
           ${
             post.video
@@ -70,16 +88,43 @@ async function generateStaticFeed() {
     .emoji { font-size:24px; }
     .date { font-size:15px; color:#444; font-weight:bold; }
     .tag { margin-top:6px; display:inline-block; }
-    .tag a { color:inherit; text-decoration:none; display:inline-block; background:yellow; font-weight:bold; padding:6px; border-radius:6px; }
+    .tag a {
+      color:inherit;
+      text-decoration:none;
+      display:inline-block;
+      background:yellow;
+      font-weight:bold;
+      padding:6px;
+      border-radius:6px;
+    }
+
+    .show-more-wrapper {
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    .show-more-btn {
+      font-size: 32px;
+      background: yellow;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="grid" id="feed">
-    ${cardsHTML}
+    ${firstFive}
+    ${extraPosts}
+  </div>
+  <div class="show-more-wrapper">
+    <button class="show-more-btn" onclick="showMore()">➕</button>
   </div>
 
   <script>
     const CAL_URL = "${CAL_URL}";
+
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
       if (!w) {
@@ -97,6 +142,13 @@ async function generateStaticFeed() {
         openCalendar();
       });
     });
+
+    function showMore() {
+      document.querySelectorAll(".card.hidden").forEach(el => {
+        el.classList.remove("hidden");
+      });
+      document.querySelector(".show-more-wrapper").style.display = "none";
+    }
   </script>
 </body>
 </html>`;
