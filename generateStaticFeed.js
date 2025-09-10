@@ -1,4 +1,3 @@
-// generate-feed.js
 require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
@@ -149,8 +148,6 @@ async function generateStaticFeed() {
       const btn = document.getElementById("show-more-btn");
 
       slice.forEach(post => {
-        const card = document.createElement("div");
-        card.outerHTML = createCard(post);
         feed.insertAdjacentHTML("beforeend", createCard(post));
       });
 
@@ -194,5 +191,4 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
 

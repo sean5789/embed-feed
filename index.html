@@ -162,8 +162,6 @@
       const btn = document.getElementById("show-more-btn");
 
       slice.forEach(post => {
-        const card = document.createElement("div");
-        card.outerHTML = createCard(post);
         feed.insertAdjacentHTML("beforeend", createCard(post));
       });
 
