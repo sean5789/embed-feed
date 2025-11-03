@@ -4,7 +4,7 @@ const axios = require('axios');
 
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
-const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
+const CAL_URL = "Instagram://user?username=ushuaiaibiza";
 const OUTPUT_FILE = 'index.html';
 const BATCH_SIZE = 5;
 
