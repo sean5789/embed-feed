@@ -62,42 +62,49 @@ async function generateStaticFeed() {
       background:#fff;
       font-family:sans-serif;
 
-      /* ✅ pas de scroll vertical global dans l'iframe */
+      /* ✅ pas de scroll vertical global */
       overflow: hidden;
       overscroll-behavior: none;
     }
 
-    /* ✅ LE SCROLLER (non transformé) */
-    .grid {
+    /* ✅ Le viewport scrollable */
+    #feed {
+      position: relative;
       height: 100%;
       overflow-x: auto;
       overflow-y: hidden;
 
       -webkit-overflow-scrolling: touch;
       scroll-behavior: smooth;
-
-      /* petit confort iOS */
       touch-action: pan-x;
 
-      /* padding du viewport */
       padding: 10px;
       box-sizing: border-box;
     }
+    #feed::-webkit-scrollbar { display:none; }
 
-    .grid::-webkit-scrollbar { display:none; }
+    /* ✅ Spacer : donne une vraie largeur scrollable au navigateur */
+    #spacer {
+      height: 1px; /* le scroll est horizontal, la hauteur n’a pas d’importance */
+      width: 1px;  /* sera set en JS */
+    }
 
-    /* ✅ LE CONTENU SCALÉ (ne scrolle pas, c’est juste du contenu) */
-    #root {
+    /* ✅ Contenu réellement affiché (scalé), placé par-dessus */
+    #content {
+      position: absolute;
+      top: 10px;   /* doit matcher le padding de #feed */
+      left: 10px;  /* doit matcher le padding de #feed */
       transform-origin: top left;
       display: flex;
       gap: 14px;
+      width: max-content;
       align-items: stretch;
-      width: max-content; /* important pour que la largeur scrollable soit correcte */
+      will-change: transform;
     }
 
     .card {
-      flex: 0 0 auto;
-      width: 165px;
+      flex:0 0 auto;
+      width:165px;
       background:#fff;
       border-radius:16px;
       overflow:hidden;
@@ -152,10 +159,10 @@ async function generateStaticFeed() {
   </style>
 </head>
 <body>
-  <!-- ✅ le viewport scrollable -->
-  <div class="grid" id="feed">
-    <!-- ✅ le contenu (scalé) -->
-    <div id="root">
+  <div id="feed">
+    <div id="spacer"></div>
+
+    <div id="content">
       ${firstBatch}
       <div class="card" id="show-more-btn">
         <div class="show-more-card" onclick="showMore()">➕</div>
@@ -201,7 +208,6 @@ async function generateStaticFeed() {
 
     function showMore() {
       const slice = remainingPosts.slice(currentIndex, currentIndex + BATCH_SIZE);
-      const root = document.getElementById("root");
       const btn = document.getElementById("show-more-btn");
 
       slice.forEach(post => {
@@ -215,8 +221,7 @@ async function generateStaticFeed() {
       }
 
       wireUpButtons();
-      measureBaseHeight();
-      resizeRoot();
+      refreshLayout();
     }
 
     function wireUpButtons() {
@@ -228,8 +233,7 @@ async function generateStaticFeed() {
         if (!v.dataset.measured) {
           v.dataset.measured = "1";
           v.addEventListener("loadedmetadata", () => {
-            measureBaseHeight();
-            resizeRoot();
+            refreshLayout();
           }, { once: true });
         }
       });
@@ -238,8 +242,7 @@ async function generateStaticFeed() {
         if (!img.dataset.measured) {
           img.dataset.measured = "1";
           img.addEventListener("load", () => {
-            measureBaseHeight();
-            resizeRoot();
+            refreshLayout();
           }, { once: true });
         }
       });
@@ -255,46 +258,51 @@ async function generateStaticFeed() {
       });
     }
 
-    // ===== SCALE PROPORTIONNEL (basé sur hauteur iframe) =====
-    let BASE_HEIGHT = null;
+    // ===== SCALE (basé sur hauteur iframe) + scroll horizontal fiable =====
+    function refreshLayout() {
+      const content = document.getElementById('content');
+      const spacer = document.getElementById('spacer');
+      const feed = document.getElementById('feed');
+      if (!content || !spacer || !feed) return;
 
-    function measureBaseHeight() {
-      const root = document.getElementById('root');
-      if (!root) return;
+      // Mesure non transformée
+      const prev = content.style.transform;
+      content.style.transform = 'none';
 
-      const prev = root.style.transform;
-      root.style.transform = 'none';
-      BASE_HEIGHT = root.scrollHeight;
-      root.style.transform = prev;
-    }
+      const baseW = content.scrollWidth;
+      const baseH = content.scrollHeight;
 
-    function resizeRoot() {
-      const root = document.getElementById('root');
-      if (!root) return;
+      content.style.transform = prev;
 
-      if (!BASE_HEIGHT) measureBaseHeight();
+      const vh = window.innerHeight || document.documentElement.clientHeight || baseH;
 
-      const vh = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
-      const scale = vh / BASE_HEIGHT;
+      // Scale basé sur la hauteur (comme tu veux)
+      const scale = vh / baseH;
 
-      root.style.transform = 'scale(' + scale + ')';
+      // Applique le scale
+      content.style.transform = 'scale(' + scale + ')';
+
+      // IMPORTANT : donner une vraie largeur scrollable au conteneur
+      const scaledW = Math.ceil(baseW * scale);
+
+      // Le spacer donne la largeur scrollable.
+      // On ajoute 20 pour compenser top/left (padding 10 + 10)
+      spacer.style.width = (scaledW + 20) + 'px';
     }
 
     window.addEventListener('load', () => {
       wireUpButtons();
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          measureBaseHeight();
-          resizeRoot();
+          refreshLayout();
         });
       });
     });
 
     window.addEventListener('resize', () => {
-      measureBaseHeight();
-      resizeRoot();
+      refreshLayout();
     });
-    // =========================================================
+    // ============================================================
   </script>
 </body>
 </html>`;
@@ -307,4 +315,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
