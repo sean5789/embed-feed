@@ -61,25 +61,25 @@ async function generateStaticFeed() {
       height:100%;
       background:#fff;
       font-family:sans-serif;
-      overflow:hidden;         /* pas de scroll vertical dans l'iframe */
+      overflow:hidden;
       overscroll-behavior:none;
     }
 
-    /* Zone swipe */
+    /* ✅ padding ici (non scalé) */
     #viewport {
       width:100%;
       height:100%;
       overflow:hidden;
-      touch-action: pan-y;     /* on gère l'horizontal, le vertical est ignoré */
       position:relative;
+      touch-action: pan-y;
+      padding:10px;
+      box-sizing:border-box;
     }
 
-    /* Track : on applique translate + scale ici (transform dynamique) */
+    /* ✅ plus de padding ici (car scalé) */
     #track {
       display:flex;
       gap:14px;
-      padding:10px;
-      box-sizing:border-box;
 
       transform-origin: top left;
       will-change: transform;
@@ -148,7 +148,6 @@ async function generateStaticFeed() {
     const remainingPosts = ${postsJSON};
     let currentIndex = 0;
 
-    // ---- ouverture calendrier (comme avant) ----
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
       if (!w) {
@@ -156,7 +155,6 @@ async function generateStaticFeed() {
       }
     }
 
-    // ---- création carte (comme avant) ----
     function createCard(post) {
       const media = post.video
         ? \`
@@ -180,7 +178,6 @@ async function generateStaticFeed() {
         </div>\`;
     }
 
-    // ---- wiring (comme avant) ----
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
         if (!v.dataset.bound) {
@@ -219,7 +216,6 @@ async function generateStaticFeed() {
       });
     }
 
-    // ---- showMore (comme avant) ----
     function showMore() {
       const slice = remainingPosts.slice(currentIndex, currentIndex + BATCH_SIZE);
       const btn = document.getElementById("show-more-btn");
@@ -236,22 +232,16 @@ async function generateStaticFeed() {
 
       wireUpButtons();
 
-      // recalcul scale + snap
       measureBaseHeight();
       computeScale();
       snapToIndex(false);
     }
 
-    // =========================================================
-    //   SWIPE SNAP + SCALING DYNAMIQUE (transform combiné)
-    // =========================================================
-
+    // ====== SNAP 1 PAR 1 + SCALE DYNAMIQUE ======
     const viewport = document.getElementById("viewport");
     const track = document.getElementById("track");
 
     let index = 0;
-
-    // scale basé sur hauteur de l’iframe (Bubble)
     let baseHeight = 0;
     let scale = 1;
 
@@ -264,38 +254,38 @@ async function generateStaticFeed() {
       return Math.max(0, Math.min(i, max));
     }
 
-    // Mesure la "hauteur de base" du contenu SANS transform (important)
     function measureBaseHeight() {
       if (!track) return;
       const prev = track.style.transform;
+      const prevTr = track.style.transition;
       track.style.transition = 'none';
       track.style.transform = 'none';
       baseHeight = track.scrollHeight || track.getBoundingClientRect().height || 1;
       track.style.transform = prev;
-      track.style.transition = '';
+      track.style.transition = prevTr;
     }
 
-    // Calcule le scale pour remplir la hauteur de l’iframe
     function computeScale() {
       if (!baseHeight) measureBaseHeight();
       const vh = window.innerHeight || document.documentElement.clientHeight || baseHeight;
       scale = vh / baseHeight;
     }
 
-    // Largeur d'un "pas" (card + gap), puis multiplié par scale (car visuellement tout est scalé)
     function stepWidthScaled() {
       const first = track.querySelector(".card");
       if (!first) return 0;
-      const gap = 14; // doit matcher CSS
-      const w = first.getBoundingClientRect().width; // largeur actuelle (peut être déjà affectée si transform)
-      // Pour éviter que la mesure soit faussée par le transform, on mesure sans transform:
+      const GAP = 14;
+
+      // Mesure largeur de base sans transform (fiable)
       const prev = track.style.transform;
+      const prevTr = track.style.transition;
       track.style.transition = 'none';
       track.style.transform = 'none';
       const baseCardW = first.getBoundingClientRect().width;
       track.style.transform = prev;
-      track.style.transition = '';
-      return (baseCardW + gap) * scale;
+      track.style.transition = prevTr;
+
+      return (baseCardW + GAP) * scale;
     }
 
     function snapToIndex(animate = true) {
@@ -304,18 +294,17 @@ async function generateStaticFeed() {
       const x = -(index * step);
 
       if (!animate) {
-        const prevT = track.style.transition;
+        const prevTr = track.style.transition;
         track.style.transition = 'none';
         track.style.transform = \`translate3d(\${x}px, 0, 0) scale(\${scale})\`;
-        // force reflow then restore transition
         track.offsetHeight;
-        track.style.transition = prevT || 'transform 320ms cubic-bezier(.25,.8,.25,1)';
+        track.style.transition = prevTr || 'transform 320ms cubic-bezier(.25,.8,.25,1)';
       } else {
         track.style.transform = \`translate3d(\${x}px, 0, 0) scale(\${scale})\`;
       }
     }
 
-    // --- Swipe (1 swipe = 1 carte), sans drag continu ---
+    // Swipe 1 par 1 (comme ton script précédent)
     let startX = 0, startY = 0, touching = false;
 
     viewport.addEventListener("touchstart", (e) => {
@@ -336,10 +325,7 @@ async function generateStaticFeed() {
       const dx = t.clientX - startX;
       const dy = t.clientY - startY;
 
-      // ignore vertical
       if (Math.abs(dy) > Math.abs(dx)) return;
-
-      // seuil
       if (Math.abs(dx) < 40) return;
 
       if (dx < 0) index += 1;
@@ -347,28 +333,6 @@ async function generateStaticFeed() {
 
       snapToIndex(true);
     }, { passive: true });
-
-    // desktop (optionnel)
-    let mouseDown = false;
-    let mx = 0, my = 0;
-    viewport.addEventListener("mousedown", (e) => {
-      mouseDown = true;
-      mx = e.clientX; my = e.clientY;
-    });
-    window.addEventListener("mouseup", (e) => {
-      if (!mouseDown) return;
-      mouseDown = false;
-
-      const dx = e.clientX - mx;
-      const dy = e.clientY - my;
-      if (Math.abs(dy) > Math.abs(dx)) return;
-      if (Math.abs(dx) < 40) return;
-
-      if (dx < 0) index += 1;
-      else index -= 1;
-
-      snapToIndex(true);
-    });
 
     window.addEventListener("resize", () => {
       measureBaseHeight();
@@ -378,7 +342,6 @@ async function generateStaticFeed() {
 
     window.addEventListener("load", () => {
       wireUpButtons();
-      // 2 frames pour stabiliser le layout (images/fonts)
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           measureBaseHeight();
@@ -392,13 +355,14 @@ async function generateStaticFeed() {
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
-    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
+    console.log(\`✅ \${OUTPUT_FILE} généré avec succès.\`);
   } catch (err) {
     console.error('❌ Erreur :', err?.response?.data || err.message);
   }
 }
 
 generateStaticFeed();
+
 
 
 
