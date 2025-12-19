@@ -62,25 +62,34 @@ async function generateStaticFeed() {
       background:#fff;
       font-family:sans-serif;
 
-      /* ✅ pas de scroll vertical (ni horizontal) au niveau page */
-      overflow:hidden;
+      /* ✅ pas de scroll vertical dans l’iframe */
+      overflow: hidden;
+      overscroll-behavior: none;
     }
 
-    /* Root scalable */
+    /* Root scalable : on mesure la vraie hauteur */
     #root {
       transform-origin: top left;
       display: inline-block;
     }
 
-    /* ✅ scroll horizontal uniquement */
     .grid {
       display:flex;
+
+      /* ✅ scroll horizontal uniquement */
       overflow-x:auto;
-      overflow-y:hidden;              /* <- interdit le scroll vertical */
-      -webkit-overflow-scrolling: touch;
+      overflow-y:hidden;
+
       gap:14px;
       padding:10px;
       scroll-behavior:smooth;
+
+      /* ✅ meilleur feeling sur mobile */
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
+
+      /* évite les micro décalages verticaux */
+      align-items: stretch;
     }
 
     .grid::-webkit-scrollbar { display:none; }
@@ -248,7 +257,7 @@ async function generateStaticFeed() {
       });
     }
 
-    // ===== SCALE PROPORTIONNEL (basé sur la hauteur) + mesure réelle (pas de coupe en bas) =====
+    // ===== SCALE PROPORTIONNEL BASÉ SUR LA HAUTEUR (sans couper le bas) =====
     let BASE_HEIGHT = null;
 
     function measureBaseHeight() {
@@ -287,7 +296,7 @@ async function generateStaticFeed() {
       measureBaseHeight();
       resizeRoot();
     });
-    // ==========================================================================================
+    // =======================================================================
   </script>
 </body>
 </html>`;
@@ -300,4 +309,3 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
