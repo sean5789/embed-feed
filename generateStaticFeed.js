@@ -58,7 +58,7 @@ async function generateStaticFeed() {
     html, body {
       margin:0;
       padding:0;
-      height:101%;
+      height:100%;
       background:#fff;
       font-family:sans-serif;
       overflow:hidden;
@@ -71,7 +71,7 @@ async function generateStaticFeed() {
       width: 100%;
       height: 100vh;
       overflow: hidden;
-      padding: 10px;
+      padding: 0px;
       box-sizing: border-box;
       touch-action: pan-y; /* swipe horizontal géré par JS */
     }
