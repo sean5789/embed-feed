@@ -66,8 +66,8 @@ async function generateStaticFeed() {
 
     /* Conteneur racine qui sera scale() */
     #root {
-      width:400px;   /* “taille de design” de base */
-      height:260px;  /* “taille de design” de base */
+      width:400px;   /* taille de design de base */
+      height:260px;  /* taille de design de base */
       transform-origin: top left;
     }
 
@@ -225,11 +225,17 @@ async function generateStaticFeed() {
       });
     }
 
-    // === AJOUT : mise à l’échelle proportionnelle selon la hauteur de l’iframe ===
+    // === MISE À L'ÉCHELLE PROPORTIONNELLE SANS COUPE ===
     function resizeRoot() {
-      const BASE_HEIGHT = 260; // doit correspondre à height de #root en CSS
-      const h = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
-      const scale = h / BASE_HEIGHT;
+      const BASE_WIDTH = 400;  // doit matcher #root width
+      const BASE_HEIGHT = 260; // doit matcher #root height
+
+      const vw = window.innerWidth  || document.documentElement.clientWidth  || BASE_WIDTH;
+      const vh = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
+
+      // On prend le scale qui rentre dans largeur ET hauteur
+      const scale = Math.min(vw / BASE_WIDTH, vh / BASE_HEIGHT);
+
       const root = document.getElementById('root');
       if (root) {
         root.style.transform = 'scale(' + scale + ')';
@@ -238,7 +244,7 @@ async function generateStaticFeed() {
 
     window.addEventListener('load', resizeRoot);
     window.addEventListener('resize', resizeRoot);
-    // ==========================================================================
+    // ================================================
 
     wireUpButtons();
   </script>
@@ -253,6 +259,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
 
 
