@@ -12,13 +12,16 @@ async function generateStaticFeed() {
   try {
     if (!API_KEY) throw new Error('❌ EMBEDSOCIAL_API_KEY est manquant.');
 
+    console.log('📡 Connexion à l’API EmbedSocial...');
     const url = `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${ALBUM_REF}`;
+
     const res = await axios.get(url, {
-      headers: { Authorization: `Bearer ${API_KEY}` },
+      headers: { Authorization: `Bearer ${API_KEY}`, Accept: 'application/json' },
       timeout: 20000,
     });
 
     const posts = Array.isArray(res?.data?.data) ? res.data.data : [];
+    console.log(`✅ ${posts.length} posts récupérés`);
 
     const postsForClient = posts.map(p => ({
       video: p?.video?.source || null,
@@ -30,192 +33,372 @@ async function generateStaticFeed() {
         <div class="video-wrapper">
           ${
             post.video
-              ? `<video src="${post.video}" autoplay muted loop playsinline></video>`
-              : `<img src="${post.image}" />`
+              ? `<video src="${post.video}" autoplay muted loop playsinline loading="lazy"></video>
+                 <button class="sound-btn" title="Ouvrir le calendrier"></button>`
+              : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
         </div>
         <div class="info">
           <div class="emoji">🥳</div>
           <div class="date">In 2025 ! ✈️🌍</div>
+          <div class="tag"><a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
         </div>
       </div>
-    `).join("");
+    `).join("\n");
 
     const postsJSON = JSON.stringify(postsForClient.slice(BATCH_SIZE));
 
     const html = `<!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<style>
-html, body {
-  margin:0;
-  padding:0;
-  height:100%;
-  overflow:hidden;
-  background:#fff;
-  font-family:sans-serif;
-}
+  <meta charset="UTF-8" />
+  <title>Flux EmbedSocial</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body {
+      margin:0;
+      padding:0;
+      height:100%;
+      background:#fff;
+      font-family:sans-serif;
+      overflow:hidden;         /* pas de scroll vertical dans l'iframe */
+      overscroll-behavior:none;
+    }
 
-#viewport {
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  touch-action: pan-y;
-}
+    /* Zone swipe */
+    #viewport {
+      width:100%;
+      height:100%;
+      overflow:hidden;
+      touch-action: pan-y;     /* on gère l'horizontal, le vertical est ignoré */
+      position:relative;
+    }
 
-#track {
-  display:flex;
-  gap:14px;
-  padding:10px;
-  will-change: transform;
-  transition: transform 320ms cubic-bezier(.25,.8,.25,1);
-  transform-origin: top left;
-}
+    /* Track : on applique translate + scale ici (transform dynamique) */
+    #track {
+      display:flex;
+      gap:14px;
+      padding:10px;
+      box-sizing:border-box;
 
-.card {
-  width:165px;
-  flex:0 0 auto;
-  border-radius:16px;
-  overflow:hidden;
-  background:#fff;
-}
+      transform-origin: top left;
+      will-change: transform;
+      transition: transform 320ms cubic-bezier(.25,.8,.25,1);
+      transform: translate3d(0,0,0) scale(1);
+    }
 
-.video-wrapper video,
-.video-wrapper img {
-  width:100%;
-  display:block;
-  object-fit:cover;
-}
+    .card {
+      flex:0 0 auto;
+      width:165px;
+      background:#fff;
+      border-radius:16px;
+      overflow:hidden;
+      text-align:center;
+    }
 
-.info {
-  padding:6px;
-  text-align:center;
-}
-</style>
+    .video-wrapper { position:relative; width:100%; }
+    video, img { width:100%; display:block; object-fit:cover; }
+
+    .sound-btn {
+      position:absolute; bottom:10px; right:6px; width:26px; height:26px;
+      background:rgba(0,0,0,.6); border:none; border-radius:50%; cursor:pointer;
+      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+      background-repeat:no-repeat; background-position:center; background-size:60%;
+    }
+
+    .info { padding:6px 10px 2px; text-align:center; }
+    .emoji { font-size:24px; }
+    .date { font-size:15px; color:#444; font-weight:bold; }
+    .tag { margin-top:6px; display:inline-block; }
+    .tag a {
+      color:inherit;
+      text-decoration:none;
+      display:inline-block;
+      background:yellow;
+      font-weight:bold;
+      padding:6px;
+      border-radius:6px;
+    }
+
+    .show-more-card {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:28px;
+      background:yellow;
+      height:100%;
+      cursor:pointer;
+      min-height:100px;
+    }
+  </style>
 </head>
-
 <body>
-<div id="viewport">
-  <div id="track">
-    ${firstBatch}
+  <div id="viewport">
+    <div id="track">
+      ${firstBatch}
+      <div class="card" id="show-more-btn">
+        <div class="show-more-card" onclick="showMore()">➕</div>
+      </div>
+    </div>
   </div>
-</div>
 
-<script>
-const remainingPosts = ${postsJSON};
-const BATCH_SIZE = ${BATCH_SIZE};
+  <script>
+    const CAL_URL = "${CAL_URL}";
+    const BATCH_SIZE = ${BATCH_SIZE};
+    const remainingPosts = ${postsJSON};
+    let currentIndex = 0;
 
-let index = 0;
-let scale = 1;
-let baseHeight = 0;
-let currentIndex = 0;
+    // ---- ouverture calendrier (comme avant) ----
+    function openCalendar() {
+      const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
+      if (!w) {
+        try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_) {}
+      }
+    }
 
-const track = document.getElementById("track");
-const viewport = document.getElementById("viewport");
+    // ---- création carte (comme avant) ----
+    function createCard(post) {
+      const media = post.video
+        ? \`
+          <div class="video-wrapper">
+            <video src="\${post.video}" autoplay muted loop playsinline loading="lazy"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
+          </div>\`
+        : \`
+          <div class="video-wrapper">
+            <img src="\${post.image}" alt="post" loading="lazy" />
+          </div>\`;
 
-function measureBaseHeight() {
-  const prev = track.style.transform;
-  track.style.transform = 'none';
-  baseHeight = track.scrollHeight;
-  track.style.transform = prev;
-}
+      return \`
+        <div class="card">
+          \${media}
+          <div class="info">
+            <div class="emoji">🥳</div>
+            <div class="date">In 2025 ! ✈️🌍</div>
+            <div class="tag"><a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
+          </div>
+        </div>\`;
+    }
 
-function updateScale() {
-  if (!baseHeight) measureBaseHeight();
-  const vh = window.innerHeight;
-  scale = vh / baseHeight;
-}
+    // ---- wiring (comme avant) ----
+    function wireUpButtons() {
+      document.querySelectorAll("video").forEach(v => {
+        if (!v.dataset.bound) {
+          v.dataset.bound = "1";
+          v.addEventListener("click", openCalendar);
+        }
+        if (!v.dataset.measured) {
+          v.dataset.measured = "1";
+          v.addEventListener("loadedmetadata", () => {
+            measureBaseHeight();
+            computeScale();
+            snapToIndex(false);
+          }, { once: true });
+        }
+      });
 
-function cardStep() {
-  const c = document.querySelector(".card");
-  if (!c) return 0;
-  return c.offsetWidth + 14;
-}
+      document.querySelectorAll("img").forEach(img => {
+        if (!img.dataset.measured) {
+          img.dataset.measured = "1";
+          img.addEventListener("load", () => {
+            measureBaseHeight();
+            computeScale();
+            snapToIndex(false);
+          }, { once: true });
+        }
+      });
 
-function applyTransform() {
-  const x = -(index * cardStep());
-  track.style.transform = \`translate3d(\${x}px,0,0) scale(\${scale})\`;
-}
+      document.querySelectorAll(".sound-btn").forEach(btn => {
+        if (!btn.dataset.bound) {
+          btn.dataset.bound = "1";
+          btn.addEventListener("click", e => {
+            e.stopPropagation();
+            openCalendar();
+          });
+        }
+      });
+    }
 
-function clampIndex() {
-  const max = track.children.length - 1;
-  index = Math.max(0, Math.min(index, max));
-}
+    // ---- showMore (comme avant) ----
+    function showMore() {
+      const slice = remainingPosts.slice(currentIndex, currentIndex + BATCH_SIZE);
+      const btn = document.getElementById("show-more-btn");
 
-function snap() {
-  clampIndex();
-  applyTransform();
-}
+      slice.forEach(post => {
+        btn.insertAdjacentHTML("beforebegin", createCard(post));
+      });
 
-function showMore() {
-  const slice = remainingPosts.slice(currentIndex, currentIndex + BATCH_SIZE);
-  slice.forEach(p => {
-    track.insertAdjacentHTML("beforeend", \`
-      <div class="card">
-        <div class="video-wrapper">
-          \${p.video ? \`<video src="\${p.video}" autoplay muted loop playsinline></video>\`
-                     : \`<img src="\${p.image}" />\`}
-        </div>
-        <div class="info">
-          <div class="emoji">🥳</div>
-          <div class="date">In 2025 ! ✈️🌍</div>
-        </div>
-      </div>\`);
-  });
-  currentIndex += BATCH_SIZE;
-  measureBaseHeight();
-  updateScale();
-  snap();
-}
+      currentIndex += BATCH_SIZE;
 
-let startX = 0;
-let startY = 0;
-let active = false;
+      if (currentIndex >= remainingPosts.length) {
+        btn.style.display = "none";
+      }
 
-viewport.addEventListener("touchstart", e => {
-  startX = e.touches[0].clientX;
-  startY = e.touches[0].clientY;
-  active = true;
-}, { passive:true });
+      wireUpButtons();
 
-viewport.addEventListener("touchend", e => {
-  if (!active) return;
-  active = false;
+      // recalcul scale + snap
+      measureBaseHeight();
+      computeScale();
+      snapToIndex(false);
+    }
 
-  const dx = e.changedTouches[0].clientX - startX;
-  const dy = e.changedTouches[0].clientY - startY;
+    // =========================================================
+    //   SWIPE SNAP + SCALING DYNAMIQUE (transform combiné)
+    // =========================================================
 
-  if (Math.abs(dy) > Math.abs(dx)) return;
-  if (Math.abs(dx) < 40) return;
+    const viewport = document.getElementById("viewport");
+    const track = document.getElementById("track");
 
-  index += dx < 0 ? 1 : -1;
-  snap();
-}, { passive:true });
+    let index = 0;
 
-window.addEventListener("resize", () => {
-  measureBaseHeight();
-  updateScale();
-  snap();
-});
+    // scale basé sur hauteur de l’iframe (Bubble)
+    let baseHeight = 0;
+    let scale = 1;
 
-window.addEventListener("load", () => {
-  measureBaseHeight();
-  updateScale();
-  snap();
-});
-</script>
+    function cardsCount() {
+      return track ? track.children.length : 0;
+    }
+
+    function clampIndex(i) {
+      const max = Math.max(0, cardsCount() - 1);
+      return Math.max(0, Math.min(i, max));
+    }
+
+    // Mesure la "hauteur de base" du contenu SANS transform (important)
+    function measureBaseHeight() {
+      if (!track) return;
+      const prev = track.style.transform;
+      track.style.transition = 'none';
+      track.style.transform = 'none';
+      baseHeight = track.scrollHeight || track.getBoundingClientRect().height || 1;
+      track.style.transform = prev;
+      track.style.transition = '';
+    }
+
+    // Calcule le scale pour remplir la hauteur de l’iframe
+    function computeScale() {
+      if (!baseHeight) measureBaseHeight();
+      const vh = window.innerHeight || document.documentElement.clientHeight || baseHeight;
+      scale = vh / baseHeight;
+    }
+
+    // Largeur d'un "pas" (card + gap), puis multiplié par scale (car visuellement tout est scalé)
+    function stepWidthScaled() {
+      const first = track.querySelector(".card");
+      if (!first) return 0;
+      const gap = 14; // doit matcher CSS
+      const w = first.getBoundingClientRect().width; // largeur actuelle (peut être déjà affectée si transform)
+      // Pour éviter que la mesure soit faussée par le transform, on mesure sans transform:
+      const prev = track.style.transform;
+      track.style.transition = 'none';
+      track.style.transform = 'none';
+      const baseCardW = first.getBoundingClientRect().width;
+      track.style.transform = prev;
+      track.style.transition = '';
+      return (baseCardW + gap) * scale;
+    }
+
+    function snapToIndex(animate = true) {
+      index = clampIndex(index);
+      const step = stepWidthScaled();
+      const x = -(index * step);
+
+      if (!animate) {
+        const prevT = track.style.transition;
+        track.style.transition = 'none';
+        track.style.transform = \`translate3d(\${x}px, 0, 0) scale(\${scale})\`;
+        // force reflow then restore transition
+        track.offsetHeight;
+        track.style.transition = prevT || 'transform 320ms cubic-bezier(.25,.8,.25,1)';
+      } else {
+        track.style.transform = \`translate3d(\${x}px, 0, 0) scale(\${scale})\`;
+      }
+    }
+
+    // --- Swipe (1 swipe = 1 carte), sans drag continu ---
+    let startX = 0, startY = 0, touching = false;
+
+    viewport.addEventListener("touchstart", (e) => {
+      const t = e.touches && e.touches[0];
+      if (!t) return;
+      touching = true;
+      startX = t.clientX;
+      startY = t.clientY;
+    }, { passive: true });
+
+    viewport.addEventListener("touchend", (e) => {
+      if (!touching) return;
+      touching = false;
+
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+
+      // ignore vertical
+      if (Math.abs(dy) > Math.abs(dx)) return;
+
+      // seuil
+      if (Math.abs(dx) < 40) return;
+
+      if (dx < 0) index += 1;
+      else index -= 1;
+
+      snapToIndex(true);
+    }, { passive: true });
+
+    // desktop (optionnel)
+    let mouseDown = false;
+    let mx = 0, my = 0;
+    viewport.addEventListener("mousedown", (e) => {
+      mouseDown = true;
+      mx = e.clientX; my = e.clientY;
+    });
+    window.addEventListener("mouseup", (e) => {
+      if (!mouseDown) return;
+      mouseDown = false;
+
+      const dx = e.clientX - mx;
+      const dy = e.clientY - my;
+      if (Math.abs(dy) > Math.abs(dx)) return;
+      if (Math.abs(dx) < 40) return;
+
+      if (dx < 0) index += 1;
+      else index -= 1;
+
+      snapToIndex(true);
+    });
+
+    window.addEventListener("resize", () => {
+      measureBaseHeight();
+      computeScale();
+      snapToIndex(false);
+    });
+
+    window.addEventListener("load", () => {
+      wireUpButtons();
+      // 2 frames pour stabiliser le layout (images/fonts)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          measureBaseHeight();
+          computeScale();
+          snapToIndex(false);
+        });
+      });
+    });
+  </script>
 </body>
 </html>`;
 
-    fs.writeFileSync(OUTPUT_FILE, html, "utf8");
-    console.log("✅ index.html généré");
+    fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
+    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
-    console.error(err.message);
+    console.error('❌ Erreur :', err?.response?.data || err.message);
   }
 }
 
 generateStaticFeed();
+
 
 
