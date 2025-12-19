@@ -71,7 +71,8 @@ async function generateStaticFeed() {
     #viewport {
       position: relative;
       width: 100%;
-      height: calc(100vh + 8px);            /* clé : suit la height Bubble */
+      min-height: 100vh;
+      padding-bottom: 8px;            /* clé : suit la height Bubble */
       overflow: hidden;         /* pas de scroll vertical */
       padding: 10px;
       box-sizing: border-box;
