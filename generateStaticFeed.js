@@ -62,41 +62,42 @@ async function generateStaticFeed() {
       background:#fff;
       font-family:sans-serif;
 
-      /* ✅ pas de scroll vertical dans l’iframe */
+      /* ✅ pas de scroll vertical global dans l'iframe */
       overflow: hidden;
       overscroll-behavior: none;
     }
 
-    /* Root scalable : on mesure la vraie hauteur */
-    #root {
-      transform-origin: top left;
-      display: inline-block;
-    }
-
+    /* ✅ LE SCROLLER (non transformé) */
     .grid {
-      display:flex;
+      height: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
 
-      /* ✅ scroll horizontal uniquement */
-      overflow-x:auto;
-      overflow-y:hidden;
-
-      gap:14px;
-      padding:10px;
-      scroll-behavior:smooth;
-
-      /* ✅ meilleur feeling sur mobile */
       -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+
+      /* petit confort iOS */
       touch-action: pan-x;
 
-      /* évite les micro décalages verticaux */
-      align-items: stretch;
+      /* padding du viewport */
+      padding: 10px;
+      box-sizing: border-box;
     }
 
     .grid::-webkit-scrollbar { display:none; }
 
+    /* ✅ LE CONTENU SCALÉ (ne scrolle pas, c’est juste du contenu) */
+    #root {
+      transform-origin: top left;
+      display: flex;
+      gap: 14px;
+      align-items: stretch;
+      width: max-content; /* important pour que la largeur scrollable soit correcte */
+    }
+
     .card {
-      flex:0 0 auto;
-      width:165px;
+      flex: 0 0 auto;
+      width: 165px;
       background:#fff;
       border-radius:16px;
       overflow:hidden;
@@ -116,19 +117,12 @@ async function generateStaticFeed() {
     }
 
     .sound-btn {
-      position:absolute;
-      bottom:10px;
-      right:6px;
-      width:26px;
-      height:26px;
+      position:absolute; bottom:10px; right:6px;
+      width:26px; height:26px;
       background:rgba(0,0,0,.6);
-      border:none;
-      border-radius:50%;
-      cursor:pointer;
+      border:none; border-radius:50%; cursor:pointer;
       background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat:no-repeat;
-      background-position:center;
-      background-size:60%;
+      background-repeat:no-repeat; background-position:center; background-size:60%;
     }
 
     .info { padding:6px 10px 2px; text-align:center; }
@@ -153,12 +147,15 @@ async function generateStaticFeed() {
       background:yellow;
       height:100%;
       cursor:pointer;
+      min-height: 100px;
     }
   </style>
 </head>
 <body>
-  <div id="root">
-    <div class="grid" id="feed">
+  <!-- ✅ le viewport scrollable -->
+  <div class="grid" id="feed">
+    <!-- ✅ le contenu (scalé) -->
+    <div id="root">
       ${firstBatch}
       <div class="card" id="show-more-btn">
         <div class="show-more-card" onclick="showMore()">➕</div>
@@ -204,6 +201,7 @@ async function generateStaticFeed() {
 
     function showMore() {
       const slice = remainingPosts.slice(currentIndex, currentIndex + BATCH_SIZE);
+      const root = document.getElementById("root");
       const btn = document.getElementById("show-more-btn");
 
       slice.forEach(post => {
@@ -257,7 +255,7 @@ async function generateStaticFeed() {
       });
     }
 
-    // ===== SCALE PROPORTIONNEL BASÉ SUR LA HAUTEUR (sans couper le bas) =====
+    // ===== SCALE PROPORTIONNEL (basé sur hauteur iframe) =====
     let BASE_HEIGHT = null;
 
     function measureBaseHeight() {
@@ -296,7 +294,7 @@ async function generateStaticFeed() {
       measureBaseHeight();
       resizeRoot();
     });
-    // =======================================================================
+    // =========================================================
   </script>
 </body>
 </html>`;
@@ -309,3 +307,4 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
