@@ -78,7 +78,7 @@ async function generateStaticFeed() {
     .video-wrapper {
       position:relative;
       width:100%;
-      height:310px; /* hauteur par défaut (petits téléphones) */
+      height:500px; /* hauteur par défaut (petits téléphones) */
     }
 
     video, img {
@@ -91,7 +91,7 @@ async function generateStaticFeed() {
     /* grands téléphones (ex: iPhone 15 Pro Max ≈ 430px+) */
     @media (min-width: 430px) {
       .video-wrapper {
-        height:300px;
+        height:500px;
       }
     }
 
