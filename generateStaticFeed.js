@@ -82,7 +82,7 @@ async function generateStaticFeed() {
 /* iPhone 15 (≈ 393px) */
 @media (min-width: 390px) and (max-width: 429px) {
   .video-wrapper {
-    height:230px;
+    height:100px;
   }
 }
 
