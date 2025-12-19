@@ -69,7 +69,7 @@ async function generateStaticFeed() {
     #viewport {
       position: relative;
       width: 100%;
-      height: 102vh;
+      height: 100vh;
       overflow: hidden;
       padding: 10px;
       box-sizing: border-box;
