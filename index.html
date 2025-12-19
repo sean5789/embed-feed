@@ -4,23 +4,22 @@
   <meta charset="UTF-8" />
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <style>
-    /* === AJOUT CRUCIAL POUR QUE LE CONTENU PRENNE 100% DE LA HAUTEUR DE L'IFRAME === */
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;   /* ← permet au wrapper de faire height:100% */
+      margin:0;
+      padding:0;
+      height:100%;
       background:#fff;
       font-family:sans-serif;
+      overflow:hidden;
     }
 
-    .wrapper {
-      height: 100%;      /* ← remplit 100% de l’iframe */
-      display: flex;
-      flex-direction: column;
+    /* Conteneur racine qui sera scale() */
+    #root {
+      width:400px;   /* “taille de design” de base */
+      height:260px;  /* “taille de design” de base */
+      transform-origin: top left;
     }
-    /* ============================================================================ */
 
     .grid {
       display:flex;
@@ -28,7 +27,6 @@
       gap:14px;
       padding:10px;
       scroll-behavior:smooth;
-      flex: 1;           /* ← la grille remplit toute la hauteur disponible */
     }
 
     .grid::-webkit-scrollbar { display:none; }
@@ -40,43 +38,43 @@
       border-radius:16px;
       overflow:hidden;
       text-align:center;
-      display:flex;
-      flex-direction:column;
     }
 
     .video-wrapper {
       position:relative;
       width:100%;
-      flex: 1;           /* ← la vidéo prend tout l’espace disponible */
-      min-height:0;
     }
 
     video, img {
       width:100%;
-      height:100%;       /* ← indispensable pour remplir la hauteur */
+      height:100%;
       display:block;
       object-fit:cover;
     }
 
     .sound-btn {
-      position:absolute; bottom:10px; right:6px;
-      width:26px; height:26px;
+      position:absolute;
+      bottom:10px;
+      right:6px;
+      width:26px;
+      height:26px;
       background:rgba(0,0,0,.6);
-      border:none; border-radius:50%; cursor:pointer;
+      border:none;
+      border-radius:50%;
+      cursor:pointer;
       background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat:no-repeat; background-position:center; background-size:60%;
+      background-repeat:no-repeat;
+      background-position:center;
+      background-size:60%;
     }
 
-    .info {
-      padding:6px 10px 8px;
-      text-align:center;
-    }
+    .info { padding:6px 10px 2px; text-align:center; }
     .emoji { font-size:24px; }
     .date { font-size:15px; color:#444; font-weight:bold; }
     .tag { margin-top:6px; display:inline-block; }
-
     .tag a {
-      color:inherit; text-decoration:none;
+      color:inherit;
+      text-decoration:none;
       display:inline-block;
       background:yellow;
       font-weight:bold;
@@ -85,14 +83,18 @@
     }
 
     .show-more-card {
-      display:flex; align-items:center; justify-content:center;
-      font-size:28px; background:yellow; height:100%; cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:28px;
+      background:yellow;
+      height:100%;
+      cursor:pointer;
     }
   </style>
 </head>
-
 <body>
-  <div class="wrapper">
+  <div id="root">
     <div class="grid" id="feed">
       
       <div class="card">
@@ -212,7 +214,9 @@
 
       currentIndex += BATCH_SIZE;
 
-      if (currentIndex >= remainingPosts.length) btn.style.display = "none";
+      if (currentIndex >= remainingPosts.length) {
+        btn.style.display = "none";
+      }
 
       wireUpButtons();
     }
@@ -224,7 +228,6 @@
           v.addEventListener("click", openCalendar);
         }
       });
-
       document.querySelectorAll(".sound-btn").forEach(btn => {
         if (!btn.dataset.bound) {
           btn.dataset.bound = "1";
@@ -235,6 +238,21 @@
         }
       });
     }
+
+    // === AJOUT : mise à l’échelle proportionnelle selon la hauteur de l’iframe ===
+    function resizeRoot() {
+      const BASE_HEIGHT = 260; // doit correspondre à height de #root en CSS
+      const h = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
+      const scale = h / BASE_HEIGHT;
+      const root = document.getElementById('root');
+      if (root) {
+        root.style.transform = 'scale(' + scale + ')';
+      }
+    }
+
+    window.addEventListener('load', resizeRoot);
+    window.addEventListener('resize', resizeRoot);
+    // ==========================================================================
 
     wireUpButtons();
   </script>
