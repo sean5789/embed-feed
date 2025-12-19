@@ -58,7 +58,7 @@ async function generateStaticFeed() {
     html, body {
       margin:0;
       padding:0;
-      height:100%;
+      height:101%;
       background:#fff;
       font-family:sans-serif;
       overflow:hidden;
