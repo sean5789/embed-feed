@@ -239,16 +239,12 @@
       });
     }
 
-    // === MISE À L'ÉCHELLE PROPORTIONNELLE SANS COUPE ===
+    // === SCALE PROPORTIONNEL BASÉ UNIQUEMENT SUR LA HAUTEUR ===
     function resizeRoot() {
-      const BASE_WIDTH = 400;  // doit matcher #root width
-      const BASE_HEIGHT = 260; // doit matcher #root height
-
-      const vw = window.innerWidth  || document.documentElement.clientWidth  || BASE_WIDTH;
+      const BASE_HEIGHT = 260; // doit matcher height de #root
       const vh = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
 
-      // On prend le scale qui rentre dans largeur ET hauteur
-      const scale = Math.min(vw / BASE_WIDTH, vh / BASE_HEIGHT);
+      const scale = vh / BASE_HEIGHT;
 
       const root = document.getElementById('root');
       if (root) {
