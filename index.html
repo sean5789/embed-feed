@@ -11,14 +11,13 @@
       height:100%;
       background:#fff;
       font-family:sans-serif;
-      overflow:hidden;
+      overflow:hidden; /* évite les scrollbars dans l'iframe */
     }
 
-    /* Conteneur racine qui sera scale() */
+    /* Root scalable : plus de width/height fixes -> on mesure la vraie hauteur */
     #root {
-      width:400px;   /* taille de design de base */
-      height:260px;  /* taille de design de base */
       transform-origin: top left;
+      display: inline-block;
     }
 
     .grid {
@@ -219,6 +218,10 @@
       }
 
       wireUpButtons();
+
+      // Re-mesure & rescale (au cas où le layout change)
+      measureBaseHeight();
+      resizeRoot();
     }
 
     function wireUpButtons() {
@@ -227,7 +230,26 @@
           v.dataset.bound = "1";
           v.addEventListener("click", openCalendar);
         }
+        // Re-mesure quand la vidéo connaît ses dimensions
+        if (!v.dataset.measured) {
+          v.dataset.measured = "1";
+          v.addEventListener("loadedmetadata", () => {
+            measureBaseHeight();
+            resizeRoot();
+          }, { once: true });
+        }
       });
+
+      document.querySelectorAll("img").forEach(img => {
+        if (!img.dataset.measured) {
+          img.dataset.measured = "1";
+          img.addEventListener("load", () => {
+            measureBaseHeight();
+            resizeRoot();
+          }, { once: true });
+        }
+      });
+
       document.querySelectorAll(".sound-btn").forEach(btn => {
         if (!btn.dataset.bound) {
           btn.dataset.bound = "1";
@@ -239,24 +261,51 @@
       });
     }
 
-    // === SCALE PROPORTIONNEL BASÉ UNIQUEMENT SUR LA HAUTEUR ===
-    function resizeRoot() {
-      const BASE_HEIGHT = 260; // doit matcher height de #root
-      const vh = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
+    // ===== SCALE PROPORTIONNEL BASÉ SUR LA HAUTEUR, SANS COUPER LE BAS =====
+    let BASE_HEIGHT = null;
 
-      const scale = vh / BASE_HEIGHT;
-
+    function measureBaseHeight() {
       const root = document.getElementById('root');
-      if (root) {
-        root.style.transform = 'scale(' + scale + ')';
-      }
+      if (!root) return;
+
+      // Mesure SANS transform pour obtenir la vraie hauteur du contenu
+      const prev = root.style.transform;
+      root.style.transform = 'none';
+
+      BASE_HEIGHT = root.scrollHeight;
+
+      root.style.transform = prev;
     }
 
-    window.addEventListener('load', resizeRoot);
-    window.addEventListener('resize', resizeRoot);
-    // ================================================
+    function resizeRoot() {
+      const root = document.getElementById('root');
+      if (!root) return;
 
-    wireUpButtons();
+      if (!BASE_HEIGHT) measureBaseHeight();
+
+      const vh = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
+      const scale = vh / BASE_HEIGHT;
+
+      root.style.transform = 'scale(' + scale + ')';
+    }
+
+    window.addEventListener('load', () => {
+      wireUpButtons();
+
+      // 2 frames pour laisser le layout se stabiliser
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          measureBaseHeight();
+          resizeRoot();
+        });
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      measureBaseHeight();
+      resizeRoot();
+    });
+    // =======================================================================
   </script>
 </body>
 </html>
