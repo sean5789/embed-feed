@@ -62,43 +62,50 @@ async function generateStaticFeed() {
       background:#fff;
       font-family:sans-serif;
 
-      /* ✅ pas de scroll vertical global */
-      overflow: hidden;
-      overscroll-behavior: none;
+      /* pas de scroll vertical global */
+      overflow:hidden;
+      overscroll-behavior:none;
+      touch-action: pan-x; /* on veut favoriser l'horizontal */
     }
 
-    /* ✅ Le viewport scrollable */
+    /* viewport scrollable (on garde overflow-x, mais on force surtout via drag JS) */
     #feed {
-      position: relative;
-      height: 100%;
-      overflow-x: auto;
+      position:relative;
+      height:100%;
+      overflow-x: scroll;
       overflow-y: hidden;
-
       -webkit-overflow-scrolling: touch;
-      scroll-behavior: smooth;
-      touch-action: pan-x;
 
-      padding: 10px;
-      box-sizing: border-box;
+      padding:10px;
+      box-sizing:border-box;
+
+      /* pas de sélection pendant le drag */
+      user-select:none;
+      -webkit-user-select:none;
+      -webkit-touch-callout:none;
+      cursor: grab;
     }
+    #feed.dragging { cursor: grabbing; }
+
     #feed::-webkit-scrollbar { display:none; }
+    #feed { scrollbar-width:none; }
 
-    /* ✅ Spacer : donne une vraie largeur scrollable au navigateur */
+    /* spacer = largeur réelle scrollable (sinon iOS + transform = scrollWidth faux) */
     #spacer {
-      height: 1px; /* le scroll est horizontal, la hauteur n’a pas d’importance */
-      width: 1px;  /* sera set en JS */
+      height: 1px;
+      width: 1px; /* set en JS */
     }
 
-    /* ✅ Contenu réellement affiché (scalé), placé par-dessus */
+    /* contenu affiché et scalé (ne scrolle pas lui-même) */
     #content {
-      position: absolute;
-      top: 10px;   /* doit matcher le padding de #feed */
-      left: 10px;  /* doit matcher le padding de #feed */
+      position:absolute;
+      top:10px;  /* doit matcher padding #feed */
+      left:10px; /* doit matcher padding #feed */
       transform-origin: top left;
-      display: flex;
-      gap: 14px;
-      width: max-content;
-      align-items: stretch;
+      display:flex;
+      gap:14px;
+      width:max-content;
+      align-items:stretch;
       will-change: transform;
     }
 
@@ -111,17 +118,8 @@ async function generateStaticFeed() {
       text-align:center;
     }
 
-    .video-wrapper {
-      position:relative;
-      width:100%;
-    }
-
-    video, img {
-      width:100%;
-      height:100%;
-      display:block;
-      object-fit:cover;
-    }
+    .video-wrapper { position:relative; width:100%; }
+    video, img { width:100%; height:100%; display:block; object-fit:cover; }
 
     .sound-btn {
       position:absolute; bottom:10px; right:6px;
@@ -137,23 +135,13 @@ async function generateStaticFeed() {
     .date { font-size:15px; color:#444; font-weight:bold; }
     .tag { margin-top:6px; display:inline-block; }
     .tag a {
-      color:inherit;
-      text-decoration:none;
-      display:inline-block;
-      background:yellow;
-      font-weight:bold;
-      padding:6px;
-      border-radius:6px;
+      color:inherit; text-decoration:none; display:inline-block;
+      background:yellow; font-weight:bold; padding:6px; border-radius:6px;
     }
 
     .show-more-card {
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:28px;
-      background:yellow;
-      height:100%;
-      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      font-size:28px; background:yellow; height:100%; cursor:pointer;
       min-height: 100px;
     }
   </style>
@@ -215,10 +203,7 @@ async function generateStaticFeed() {
       });
 
       currentIndex += BATCH_SIZE;
-
-      if (currentIndex >= remainingPosts.length) {
-        btn.style.display = "none";
-      }
+      if (currentIndex >= remainingPosts.length) btn.style.display = "none";
 
       wireUpButtons();
       refreshLayout();
@@ -232,18 +217,14 @@ async function generateStaticFeed() {
         }
         if (!v.dataset.measured) {
           v.dataset.measured = "1";
-          v.addEventListener("loadedmetadata", () => {
-            refreshLayout();
-          }, { once: true });
+          v.addEventListener("loadedmetadata", refreshLayout, { once: true });
         }
       });
 
       document.querySelectorAll("img").forEach(img => {
         if (!img.dataset.measured) {
           img.dataset.measured = "1";
-          img.addEventListener("load", () => {
-            refreshLayout();
-          }, { once: true });
+          img.addEventListener("load", refreshLayout, { once: true });
         }
       });
 
@@ -258,14 +239,13 @@ async function generateStaticFeed() {
       });
     }
 
-    // ===== SCALE (basé sur hauteur iframe) + scroll horizontal fiable =====
+    // ===== Scale basé sur hauteur + spacer pour scrollWidth correct =====
     function refreshLayout() {
       const content = document.getElementById('content');
       const spacer = document.getElementById('spacer');
       const feed = document.getElementById('feed');
       if (!content || !spacer || !feed) return;
 
-      // Mesure non transformée
       const prev = content.style.transform;
       content.style.transform = 'none';
 
@@ -275,40 +255,108 @@ async function generateStaticFeed() {
       content.style.transform = prev;
 
       const vh = window.innerHeight || document.documentElement.clientHeight || baseH;
-
-      // Scale basé sur la hauteur (comme tu veux)
       const scale = vh / baseH;
 
-      // Applique le scale
       content.style.transform = 'scale(' + scale + ')';
 
-      // IMPORTANT : donner une vraie largeur scrollable au conteneur
       const scaledW = Math.ceil(baseW * scale);
+      spacer.style.width = (scaledW + 20) + 'px'; // + padding left/right (10+10)
+    }
 
-      // Le spacer donne la largeur scrollable.
-      // On ajoute 20 pour compenser top/left (padding 10 + 10)
-      spacer.style.width = (scaledW + 20) + 'px';
+    // ===== Drag-to-scroll (force le scroll horizontal même si iOS bloque) =====
+    function enableDragScroll() {
+      const feed = document.getElementById('feed');
+      if (!feed) return;
+
+      let isDown = false;
+      let startX = 0;
+      let startY = 0;
+      let startScrollLeft = 0;
+      let dragged = false;
+
+      const THRESH = 6; // px
+
+      function onDown(x, y) {
+        isDown = true;
+        dragged = false;
+        startX = x;
+        startY = y;
+        startScrollLeft = feed.scrollLeft;
+        feed.classList.add('dragging');
+      }
+
+      function onMove(x, y, e) {
+        if (!isDown) return;
+
+        const dx = x - startX;
+        const dy = y - startY;
+
+        // On ne déclenche le drag que si c'est majoritairement horizontal
+        if (!dragged) {
+          if (Math.abs(dx) < THRESH) return;
+          if (Math.abs(dy) > Math.abs(dx)) {
+            // c'était plutôt vertical -> on annule le drag
+            isDown = false;
+            feed.classList.remove('dragging');
+            return;
+          }
+          dragged = true;
+        }
+
+        // IMPORTANT : empêcher le scroll/zoom/bounce iOS
+        if (e && e.cancelable) e.preventDefault();
+
+        feed.scrollLeft = startScrollLeft - dx;
+      }
+
+      function onUp() {
+        isDown = false;
+        feed.classList.remove('dragging');
+      }
+
+      // Touch (iOS)
+      feed.addEventListener('touchstart', (e) => {
+        if (!e.touches || !e.touches[0]) return;
+        const t = e.touches[0];
+        onDown(t.clientX, t.clientY);
+      }, { passive: true });
+
+      feed.addEventListener('touchmove', (e) => {
+        if (!e.touches || !e.touches[0]) return;
+        const t = e.touches[0];
+        onMove(t.clientX, t.clientY, e);
+      }, { passive: false });
+
+      feed.addEventListener('touchend', onUp, { passive: true });
+      feed.addEventListener('touchcancel', onUp, { passive: true });
+
+      // Mouse (desktop)
+      feed.addEventListener('mousedown', (e) => {
+        onDown(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        onMove(e.clientX, e.clientY, e);
+      }, { passive: false });
+
+      window.addEventListener('mouseup', onUp);
     }
 
     window.addEventListener('load', () => {
       wireUpButtons();
+      enableDragScroll();
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          refreshLayout();
-        });
+        requestAnimationFrame(refreshLayout);
       });
     });
 
-    window.addEventListener('resize', () => {
-      refreshLayout();
-    });
-    // ============================================================
+    window.addEventListener('resize', refreshLayout);
   </script>
 </body>
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
-    console.log(\`✅ \${OUTPUT_FILE} généré avec succès.\`);
+    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
     console.error('❌ Erreur :', err?.response?.data || err.message);
   }
