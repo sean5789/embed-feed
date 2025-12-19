@@ -65,31 +65,32 @@ async function generateStaticFeed() {
       overscroll-behavior:none;
     }
 
-    /* ✅ padding ici (non scalé) */
+    /* viewport (pas de scroll libre) */
     #viewport {
-      width:100%;
-      height:100%;
-      overflow:hidden;
-      position:relative;
-      touch-action: pan-y;
-      padding:10px;
-      box-sizing:border-box;
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+      padding: 10px;
+      box-sizing: border-box;
+      touch-action: pan-y; /* swipe horizontal géré par JS */
     }
 
-    /* ✅ plus de padding ici (car scalé) */
+    /* track qui bouge */
     #track {
-      display:flex;
-      gap:14px;
-
-      transform-origin: top left;
+      position: absolute;
+      top: 10px;   /* doit matcher padding viewport */
+      left: 10px;  /* doit matcher padding viewport */
+      display: flex;
+      gap: 14px;
+      width: max-content;
       will-change: transform;
+      transform: translate3d(0,0,0);
       transition: transform 320ms cubic-bezier(.25,.8,.25,1);
-      transform: translate3d(0,0,0) scale(1);
     }
 
     .card {
-      flex:0 0 auto;
-      width:165px;
+      flex: 0 0 auto;
+      width: 165px;
       background:#fff;
       border-radius:16px;
       overflow:hidden;
@@ -97,11 +98,13 @@ async function generateStaticFeed() {
     }
 
     .video-wrapper { position:relative; width:100%; }
-    video, img { width:100%; display:block; object-fit:cover; }
+    video, img { width:100%; height:100%; display:block; object-fit:cover; }
 
     .sound-btn {
-      position:absolute; bottom:10px; right:6px; width:26px; height:26px;
-      background:rgba(0,0,0,.6); border:none; border-radius:50%; cursor:pointer;
+      position:absolute; bottom:10px; right:6px;
+      width:26px; height:26px;
+      background:rgba(0,0,0,.6);
+      border:none; border-radius:50%; cursor:pointer;
       background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
       background-repeat:no-repeat; background-position:center; background-size:60%;
     }
@@ -111,29 +114,51 @@ async function generateStaticFeed() {
     .date { font-size:15px; color:#444; font-weight:bold; }
     .tag { margin-top:6px; display:inline-block; }
     .tag a {
-      color:inherit;
-      text-decoration:none;
-      display:inline-block;
-      background:yellow;
-      font-weight:bold;
-      padding:6px;
-      border-radius:6px;
+      color:inherit; text-decoration:none; display:inline-block;
+      background:yellow; font-weight:bold; padding:6px; border-radius:6px;
     }
 
     .show-more-card {
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:28px;
-      background:yellow;
-      height:100%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:28px; background:yellow; height:100%;
       cursor:pointer;
-      min-height:100px;
+      min-height: 100px;
+    }
+
+    /* boutons */
+    .nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(0,0,0,.55);
+      color: #fff;
+      font-size: 22px;
+      line-height: 44px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 10;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .nav-btn:active { transform: translateY(-50%) scale(0.98); }
+    #btn-prev { left: 10px; }
+    #btn-next { right: 10px; }
+
+    .nav-btn[disabled] {
+      opacity: .25;
+      cursor: default;
     }
   </style>
 </head>
 <body>
   <div id="viewport">
+    <button id="btn-prev" class="nav-btn" aria-label="Précédent">←</button>
+    <button id="btn-next" class="nav-btn" aria-label="Suivant">→</button>
+
     <div id="track">
       ${firstBatch}
       <div class="card" id="show-more-btn">
@@ -146,13 +171,34 @@ async function generateStaticFeed() {
     const CAL_URL = "${CAL_URL}";
     const BATCH_SIZE = ${BATCH_SIZE};
     const remainingPosts = ${postsJSON};
-    let currentIndex = 0;
+
+    let currentIndex = 0; // index de la carte affichée à gauche
+    let stepPx = 179;     // 165 + 14 (recalculé au load)
+    let maxIndex = 0;     // recalculé
 
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
       if (!w) {
         try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_) {}
       }
+    }
+
+    function wireUpButtons() {
+      document.querySelectorAll("video").forEach(v => {
+        if (!v.dataset.bound) {
+          v.dataset.bound = "1";
+          v.addEventListener("click", openCalendar);
+        }
+      });
+      document.querySelectorAll(".sound-btn").forEach(btn => {
+        if (!btn.dataset.bound) {
+          btn.dataset.bound = "1";
+          btn.addEventListener("click", e => {
+            e.stopPropagation();
+            openCalendar();
+          });
+        }
+      });
     }
 
     function createCard(post) {
@@ -178,191 +224,132 @@ async function generateStaticFeed() {
         </div>\`;
     }
 
-    function wireUpButtons() {
-      document.querySelectorAll("video").forEach(v => {
-        if (!v.dataset.bound) {
-          v.dataset.bound = "1";
-          v.addEventListener("click", openCalendar);
-        }
-        if (!v.dataset.measured) {
-          v.dataset.measured = "1";
-          v.addEventListener("loadedmetadata", () => {
-            measureBaseHeight();
-            computeScale();
-            snapToIndex(false);
-          }, { once: true });
-        }
-      });
-
-      document.querySelectorAll("img").forEach(img => {
-        if (!img.dataset.measured) {
-          img.dataset.measured = "1";
-          img.addEventListener("load", () => {
-            measureBaseHeight();
-            computeScale();
-            snapToIndex(false);
-          }, { once: true });
-        }
-      });
-
-      document.querySelectorAll(".sound-btn").forEach(btn => {
-        if (!btn.dataset.bound) {
-          btn.dataset.bound = "1";
-          btn.addEventListener("click", e => {
-            e.stopPropagation();
-            openCalendar();
-          });
-        }
-      });
-    }
-
     function showMore() {
-      const slice = remainingPosts.slice(currentIndex, currentIndex + BATCH_SIZE);
-      const btn = document.getElementById("show-more-btn");
+      const slice = remainingPosts.slice(currentIndexLoaded, currentIndexLoaded + BATCH_SIZE);
+      const track = document.getElementById("track");
+      const btnCard = document.getElementById("show-more-btn");
 
       slice.forEach(post => {
-        btn.insertAdjacentHTML("beforebegin", createCard(post));
+        btnCard.insertAdjacentHTML("beforebegin", createCard(post));
       });
 
-      currentIndex += BATCH_SIZE;
+      currentIndexLoaded += BATCH_SIZE;
 
-      if (currentIndex >= remainingPosts.length) {
-        btn.style.display = "none";
+      if (currentIndexLoaded >= remainingPosts.length) {
+        btnCard.style.display = "none";
       }
 
       wireUpButtons();
-
-      measureBaseHeight();
-      computeScale();
-      snapToIndex(false);
+      recalc();
+      updateUI();
     }
 
-    // ====== SNAP 1 PAR 1 + SCALE DYNAMIQUE ======
-    const viewport = document.getElementById("viewport");
-    const track = document.getElementById("track");
+    let currentIndexLoaded = 0;
 
-    let index = 0;
-    let baseHeight = 0;
-    let scale = 1;
+    function recalc() {
+      const track = document.getElementById('track');
+      const firstCard = track.querySelector('.card');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
 
-    function cardsCount() {
-      return track ? track.children.length : 0;
-    }
-
-    function clampIndex(i) {
-      const max = Math.max(0, cardsCount() - 1);
-      return Math.max(0, Math.min(i, max));
-    }
-
-    function measureBaseHeight() {
-      if (!track) return;
-      const prev = track.style.transform;
-      const prevTr = track.style.transition;
-      track.style.transition = 'none';
-      track.style.transform = 'none';
-      baseHeight = track.scrollHeight || track.getBoundingClientRect().height || 1;
-      track.style.transform = prev;
-      track.style.transition = prevTr;
-    }
-
-    function computeScale() {
-      if (!baseHeight) measureBaseHeight();
-      const vh = window.innerHeight || document.documentElement.clientHeight || baseHeight;
-      scale = vh / baseHeight;
-    }
-
-    function stepWidthScaled() {
-      const first = track.querySelector(".card");
-      if (!first) return 0;
-      const GAP = 14;
-
-      // Mesure largeur de base sans transform (fiable)
-      const prev = track.style.transform;
-      const prevTr = track.style.transition;
-      track.style.transition = 'none';
-      track.style.transform = 'none';
-      const baseCardW = first.getBoundingClientRect().width;
-      track.style.transform = prev;
-      track.style.transition = prevTr;
-
-      return (baseCardW + GAP) * scale;
-    }
-
-    function snapToIndex(animate = true) {
-      index = clampIndex(index);
-      const step = stepWidthScaled();
-      const x = -(index * step);
-
-      if (!animate) {
-        const prevTr = track.style.transition;
-        track.style.transition = 'none';
-        track.style.transform = \`translate3d(\${x}px, 0, 0) scale(\${scale})\`;
-        track.offsetHeight;
-        track.style.transition = prevTr || 'transform 320ms cubic-bezier(.25,.8,.25,1)';
+      // step = largeur carte + gap (mesuré)
+      if (firstCard) {
+        const cardW = firstCard.getBoundingClientRect().width || 165;
+        stepPx = cardW + 14;
       } else {
-        track.style.transform = \`translate3d(\${x}px, 0, 0) scale(\${scale})\`;
+        stepPx = 165 + 14;
       }
+
+      const cards = track.querySelectorAll('.card');
+      maxIndex = Math.max(0, cards.length - 1);
+
+      // clamp index
+      if (currentIndex > maxIndex) currentIndex = maxIndex;
+
+      // update disabled state
+      btnPrev.disabled = currentIndex <= 0;
+      btnNext.disabled = currentIndex >= maxIndex;
     }
 
-    // Swipe 1 par 1 (comme ton script précédent)
-    let startX = 0, startY = 0, touching = false;
+    function goTo(index) {
+      const track = document.getElementById('track');
+      currentIndex = Math.max(0, Math.min(maxIndex, index));
 
-    viewport.addEventListener("touchstart", (e) => {
-      const t = e.touches && e.touches[0];
-      if (!t) return;
-      touching = true;
-      startX = t.clientX;
-      startY = t.clientY;
-    }, { passive: true });
+      // déplacement par carte
+      const x = -(currentIndex * stepPx);
+      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
 
-    viewport.addEventListener("touchend", (e) => {
-      if (!touching) return;
-      touching = false;
+      updateUI();
+    }
 
-      const t = e.changedTouches && e.changedTouches[0];
-      if (!t) return;
+    function updateUI() {
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+      btnPrev.disabled = currentIndex <= 0;
+      btnNext.disabled = currentIndex >= maxIndex;
+    }
 
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
+    function next() { goTo(currentIndex + 1); }
+    function prev() { goTo(currentIndex - 1); }
 
-      if (Math.abs(dy) > Math.abs(dx)) return;
-      if (Math.abs(dx) < 40) return;
+    // boutons
+    function setupNavButtons() {
+      document.getElementById('btn-prev').addEventListener('click', prev);
+      document.getElementById('btn-next').addEventListener('click', next);
+    }
 
-      if (dx < 0) index += 1;
-      else index -= 1;
+    // swipe (optionnel mais utile)
+    function setupSwipe() {
+      const viewport = document.getElementById('viewport');
+      let startX = 0;
+      let startY = 0;
 
-      snapToIndex(true);
-    }, { passive: true });
+      viewport.addEventListener('touchstart', (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        startX = t.clientX;
+        startY = t.clientY;
+      }, { passive: true });
 
-    window.addEventListener("resize", () => {
-      measureBaseHeight();
-      computeScale();
-      snapToIndex(false);
+      viewport.addEventListener('touchend', (e) => {
+        const t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+
+        // ignore si surtout vertical
+        if (Math.abs(dy) > Math.abs(dx)) return;
+
+        // seuil swipe
+        if (dx <= -40) next();
+        else if (dx >= 40) prev();
+      }, { passive: true });
+    }
+
+    window.addEventListener('load', () => {
+      wireUpButtons();
+      setupNavButtons();
+      setupSwipe();
+      recalc();
+      goTo(0);
     });
 
-    window.addEventListener("load", () => {
-      wireUpButtons();
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          measureBaseHeight();
-          computeScale();
-          snapToIndex(false);
-        });
-      });
+    window.addEventListener('resize', () => {
+      recalc();
+      goTo(currentIndex);
     });
   </script>
 </body>
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
-    console.log(\`✅ \${OUTPUT_FILE} généré avec succès.\`);
+    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
     console.error('❌ Erreur :', err?.response?.data || err.message);
   }
 }
 
 generateStaticFeed();
-
-
 
 
