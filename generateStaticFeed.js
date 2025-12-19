@@ -74,33 +74,32 @@ async function generateStaticFeed() {
       text-align:center;
     }
 
-    /* ---- ICI : gestion de la hauteur vidéo réactive ---- */
-    .video-wrapper {
-      position:relative;
-      width:100%;
-      height:420px; /* hauteur par défaut (petits téléphones) */
-    }
+    /* petits téléphones */
+.video-wrapper {
+  height:210px;
+}
 
-    video, img {
-      width:100%;
-      height:100%;      /* la vidéo remplit le wrapper */
-      display:block;
-      object-fit:cover;
-    }
+/* iPhone 15 (≈ 393px) */
+@media (min-width: 390px) and (max-width: 429px) {
+  .video-wrapper {
+    height:230px;
+  }
+}
 
-    /* grands téléphones (ex: iPhone 15 Pro Max ≈ 430px+) */
-    @media (min-width: 430px) {
-      .video-wrapper {
-        height:500px;
-      }
-    }
+/* iPhone 15 Pro Max et + */
+@media (min-width: 430px) and (max-width: 767px) {
+  .video-wrapper {
+    height:260px;
+  }
+}
 
-    /* tablettes et + */
-    @media (min-width: 768px) {
-      .video-wrapper {
-        height:360px;
-      }
-    }
+/* Tablettes */
+@media (min-width: 768px) {
+  .video-wrapper {
+    height:320px;
+  }
+}
+
     /* ---- fin partie responsive ---- */
 
     .sound-btn {
@@ -237,6 +236,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
 
 
