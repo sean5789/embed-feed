@@ -58,28 +58,31 @@ async function generateStaticFeed() {
     html, body {
       margin:0;
       padding:0;
-      height:100%;
       background:#fff;
       font-family:sans-serif;
-      overflow:hidden;
+
+      /* ✅ pas de scroll horizontal global */
+      overflow-x:hidden;
       overscroll-behavior:none;
     }
 
-    /* viewport (pas de scroll libre) */
+    /* viewport : pas de hauteur figée, Bubble peut agrandir sans couper le bas */
     #viewport {
       position: relative;
-      height: 100%;
-      overflow: hidden;
+      width: 100%;
+
+      overflow-x: hidden;
+      overflow-y: visible;
+
       padding: 10px;
       box-sizing: border-box;
+
       touch-action: pan-y; /* swipe horizontal géré par JS */
     }
 
-    /* track qui bouge */
+    /* track qui bouge horizontalement */
     #track {
-      position: absolute;
-      top: 10px;   /* doit matcher padding viewport */
-      left: 10px;  /* doit matcher padding viewport */
+      position: relative;
       display: flex;
       gap: 14px;
       width: max-content;
@@ -120,14 +123,13 @@ async function generateStaticFeed() {
 
     .show-more-card {
       display:flex; align-items:center; justify-content:center;
-      font-size:28px; background:yellow; height:100%;
-      cursor:pointer;
+      font-size:28px; background:yellow; height:100%; cursor:pointer;
       min-height: 100px;
     }
 
     /* boutons */
     .nav-btn {
-      position: absolute;
+      position: sticky; /* reste visible même si le contenu est plus haut */
       top: 50%;
       transform: translateY(-50%);
       width: 44px;
@@ -146,18 +148,33 @@ async function generateStaticFeed() {
     }
     .nav-btn:active { transform: translateY(-50%) scale(0.98); }
     #btn-prev { left: 10px; }
-    #btn-next { right: 10px; }
+    #btn-next { right: 10px; float: right; }
 
     .nav-btn[disabled] {
       opacity: .25;
       cursor: default;
     }
+
+    /* wrapper boutons pour les placer au-dessus du track */
+    #nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 100%;
+      pointer-events: none; /* laisse cliquer le contenu */
+    }
+    #nav .nav-btn {
+      pointer-events: auto; /* mais boutons cliquables */
+    }
   </style>
 </head>
 <body>
   <div id="viewport">
-    <button id="btn-prev" class="nav-btn" aria-label="Précédent">←</button>
-    <button id="btn-next" class="nav-btn" aria-label="Suivant">→</button>
+    <div id="nav">
+      <button id="btn-prev" class="nav-btn" aria-label="Précédent">←</button>
+      <button id="btn-next" class="nav-btn" aria-label="Suivant">→</button>
+    </div>
 
     <div id="track">
       ${firstBatch}
@@ -172,9 +189,11 @@ async function generateStaticFeed() {
     const BATCH_SIZE = ${BATCH_SIZE};
     const remainingPosts = ${postsJSON};
 
-    let currentIndex = 0; // index de la carte affichée à gauche
-    let stepPx = 179;     // 165 + 14 (recalculé au load)
-    let maxIndex = 0;     // recalculé
+    let currentIndex = 0;
+    let stepPx = 179;  // 165 + 14 (mesuré au load)
+    let maxIndex = 0;
+
+    let currentIndexLoaded = 0;
 
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
@@ -244,18 +263,13 @@ async function generateStaticFeed() {
       updateUI();
     }
 
-    let currentIndexLoaded = 0;
-
     function recalc() {
       const track = document.getElementById('track');
       const firstCard = track.querySelector('.card');
-      const btnPrev = document.getElementById('btn-prev');
-      const btnNext = document.getElementById('btn-next');
 
-      // step = largeur carte + gap (mesuré)
       if (firstCard) {
-        const cardW = firstCard.getBoundingClientRect().width || 165;
-        stepPx = cardW + 14;
+        const rect = firstCard.getBoundingClientRect();
+        stepPx = (rect.width || 165) + 14;
       } else {
         stepPx = 165 + 14;
       }
@@ -263,19 +277,14 @@ async function generateStaticFeed() {
       const cards = track.querySelectorAll('.card');
       maxIndex = Math.max(0, cards.length - 1);
 
-      // clamp index
       if (currentIndex > maxIndex) currentIndex = maxIndex;
-
-      // update disabled state
-      btnPrev.disabled = currentIndex <= 0;
-      btnNext.disabled = currentIndex >= maxIndex;
+      updateUI();
     }
 
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
 
-      // déplacement par carte
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
 
@@ -292,13 +301,12 @@ async function generateStaticFeed() {
     function next() { goTo(currentIndex + 1); }
     function prev() { goTo(currentIndex - 1); }
 
-    // boutons
     function setupNavButtons() {
       document.getElementById('btn-prev').addEventListener('click', prev);
       document.getElementById('btn-next').addEventListener('click', next);
     }
 
-    // swipe (optionnel mais utile)
+    // swipe (optionnel)
     function setupSwipe() {
       const viewport = document.getElementById('viewport');
       let startX = 0;
@@ -318,10 +326,8 @@ async function generateStaticFeed() {
         const dx = t.clientX - startX;
         const dy = t.clientY - startY;
 
-        // ignore si surtout vertical
         if (Math.abs(dy) > Math.abs(dx)) return;
 
-        // seuil swipe
         if (dx <= -40) next();
         else if (dx >= 40) prev();
       }, { passive: true });
