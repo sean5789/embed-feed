@@ -65,10 +65,10 @@ async function generateStaticFeed() {
       /* pas de scroll vertical global */
       overflow:hidden;
       overscroll-behavior:none;
-      touch-action: pan-x; /* on veut favoriser l'horizontal */
+      touch-action: pan-x;
     }
 
-    /* viewport scrollable (on garde overflow-x, mais on force surtout via drag JS) */
+    /* viewport scrollable (scroll natif si possible, sinon drag JS) */
     #feed {
       position:relative;
       height:100%;
@@ -79,18 +79,23 @@ async function generateStaticFeed() {
       padding:10px;
       box-sizing:border-box;
 
-      /* pas de sélection pendant le drag */
       user-select:none;
       -webkit-user-select:none;
       -webkit-touch-callout:none;
+
       cursor: grab;
+
+      /* IMPORTANT perf + fluidité */
+      scroll-behavior: auto;
+      will-change: scroll-position;
+      contain: content;
     }
     #feed.dragging { cursor: grabbing; }
 
     #feed::-webkit-scrollbar { display:none; }
     #feed { scrollbar-width:none; }
 
-    /* spacer = largeur réelle scrollable (sinon iOS + transform = scrollWidth faux) */
+    /* spacer = vraie largeur scrollable (utile avec transform) */
     #spacer {
       height: 1px;
       width: 1px; /* set en JS */
@@ -243,8 +248,7 @@ async function generateStaticFeed() {
     function refreshLayout() {
       const content = document.getElementById('content');
       const spacer = document.getElementById('spacer');
-      const feed = document.getElementById('feed');
-      if (!content || !spacer || !feed) return;
+      if (!content || !spacer) return;
 
       const prev = content.style.transform;
       content.style.transform = 'none';
@@ -263,7 +267,7 @@ async function generateStaticFeed() {
       spacer.style.width = (scaledW + 20) + 'px'; // + padding left/right (10+10)
     }
 
-    // ===== Drag-to-scroll (force le scroll horizontal même si iOS bloque) =====
+    // ===== Drag-to-scroll fluide (rAF + inertie) =====
     function enableDragScroll() {
       const feed = document.getElementById('feed');
       if (!feed) return;
@@ -272,16 +276,80 @@ async function generateStaticFeed() {
       let startX = 0;
       let startY = 0;
       let startScrollLeft = 0;
-      let dragged = false;
 
-      const THRESH = 6; // px
+      // rAF throttling
+      let targetScrollLeft = 0;
+      let rafId = null;
+
+      // inertie
+      let lastX = 0;
+      let lastT = 0;
+      let velocity = 0;
+      let inertiaRaf = null;
+
+      const THRESH = 6;
+
+      function clampScroll(x) {
+        const max = feed.scrollWidth - feed.clientWidth;
+        if (x < 0) return 0;
+        if (x > max) return max;
+        return x;
+      }
+
+      function applyScroll() {
+        rafId = null;
+        feed.scrollLeft = clampScroll(targetScrollLeft);
+      }
+
+      function scheduleScroll() {
+        if (rafId) return;
+        rafId = requestAnimationFrame(applyScroll);
+      }
+
+      function stopInertia() {
+        if (inertiaRaf) cancelAnimationFrame(inertiaRaf);
+        inertiaRaf = null;
+      }
+
+      function runInertia() {
+        const FRICTION = 0.95;
+
+        function step() {
+          velocity *= FRICTION;
+
+          if (Math.abs(velocity) < 0.02) {
+            inertiaRaf = null;
+            return;
+          }
+
+          targetScrollLeft = feed.scrollLeft + velocity * 16;
+          feed.scrollLeft = clampScroll(targetScrollLeft);
+
+          const atLeft = feed.scrollLeft <= 0;
+          const atRight = feed.scrollLeft >= feed.scrollWidth - feed.clientWidth - 1;
+          if ((atLeft && velocity < 0) || (atRight && velocity > 0)) {
+            inertiaRaf = null;
+            return;
+          }
+
+          inertiaRaf = requestAnimationFrame(step);
+        }
+
+        inertiaRaf = requestAnimationFrame(step);
+      }
 
       function onDown(x, y) {
         isDown = true;
-        dragged = false;
         startX = x;
         startY = y;
         startScrollLeft = feed.scrollLeft;
+        targetScrollLeft = startScrollLeft;
+
+        lastX = x;
+        lastT = performance.now();
+        velocity = 0;
+
+        stopInertia();
         feed.classList.add('dragging');
       }
 
@@ -291,54 +359,54 @@ async function generateStaticFeed() {
         const dx = x - startX;
         const dy = y - startY;
 
-        // On ne déclenche le drag que si c'est majoritairement horizontal
-        if (!dragged) {
-          if (Math.abs(dx) < THRESH) return;
-          if (Math.abs(dy) > Math.abs(dx)) {
-            // c'était plutôt vertical -> on annule le drag
-            isDown = false;
-            feed.classList.remove('dragging');
-            return;
-          }
-          dragged = true;
-        }
+        if (Math.abs(dx) < THRESH) return;
+        if (Math.abs(dy) > Math.abs(dx)) return;
 
-        // IMPORTANT : empêcher le scroll/zoom/bounce iOS
         if (e && e.cancelable) e.preventDefault();
 
-        feed.scrollLeft = startScrollLeft - dx;
+        targetScrollLeft = startScrollLeft - dx;
+        scheduleScroll();
+
+        const now = performance.now();
+        const dt = Math.max(1, now - lastT);
+        const vx = (lastX - x) / dt; // px/ms
+        velocity = velocity * 0.8 + (vx * 1000) * 0.2; // px/s approx
+
+        lastX = x;
+        lastT = now;
       }
 
       function onUp() {
+        if (!isDown) return;
         isDown = false;
         feed.classList.remove('dragging');
+
+        velocity = velocity * 0.016; // px/frame
+
+        if (Math.abs(velocity) > 0.5) {
+          runInertia();
+        }
       }
 
-      // Touch (iOS)
+      // Touch
       feed.addEventListener('touchstart', (e) => {
-        if (!e.touches || !e.touches[0]) return;
-        const t = e.touches[0];
+        const t = e.touches && e.touches[0];
+        if (!t) return;
         onDown(t.clientX, t.clientY);
       }, { passive: true });
 
       feed.addEventListener('touchmove', (e) => {
-        if (!e.touches || !e.touches[0]) return;
-        const t = e.touches[0];
+        const t = e.touches && e.touches[0];
+        if (!t) return;
         onMove(t.clientX, t.clientY, e);
       }, { passive: false });
 
       feed.addEventListener('touchend', onUp, { passive: true });
       feed.addEventListener('touchcancel', onUp, { passive: true });
 
-      // Mouse (desktop)
-      feed.addEventListener('mousedown', (e) => {
-        onDown(e.clientX, e.clientY);
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        onMove(e.clientX, e.clientY, e);
-      }, { passive: false });
-
+      // Mouse
+      feed.addEventListener('mousedown', (e) => onDown(e.clientX, e.clientY));
+      window.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY, e), { passive: false });
       window.addEventListener('mouseup', onUp);
     }
 
@@ -363,5 +431,4 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
 
