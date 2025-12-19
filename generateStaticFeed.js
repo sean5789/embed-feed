@@ -65,24 +65,26 @@ async function generateStaticFeed() {
       overscroll-behavior:none;
     }
 
-    /* ✅ viewport = suit la hauteur Bubble (avec marge anti-coupe iOS) */
+    /* viewport = suit la hauteur Bubble (petit +2vh anti-coupe iOS) */
     #viewport {
       position: relative;
       width: 100%;
-      height: 100vh;
+      height: 102vh;
       overflow: hidden;
-      padding: 0px;
+      padding: 10px;
       box-sizing: border-box;
-      touch-action: pan-y; /* swipe horizontal géré par JS */
+
+      /* on laisse le vertical au navigateur, l’horizontal est géré par JS */
+      touch-action: pan-y;
     }
 
-    /* ✅ stage = se scale pour remplir la hauteur */
+    /* stage = se scale pour remplir la hauteur */
     #stage {
       transform-origin: top left;
       will-change: transform;
     }
 
-    /* ✅ track = se translate pour passer carte par carte */
+    /* track = se translate horizontalement (drag + snap) */
     #track {
       display: flex;
       gap: 14px;
@@ -268,37 +270,89 @@ async function generateStaticFeed() {
       stage.style.transform = 'scale(' + stageScale + ')';
     }
 
+    function setTrackX(x) {
+      const track = document.getElementById('track');
+      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+    }
+
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
 
       const x = -(currentIndex * stepPx);
-      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+      track.style.transition = 'transform 320ms cubic-bezier(.25,.8,.25,1)';
+      setTrackX(x);
     }
 
-    // swipe "un par un"
-    function setupSwipe() {
+    // ✅ Drag fluide (suivi doigt) + Snap (carte la plus proche)
+    function setupDragSnap() {
       const viewport = document.getElementById('viewport');
-      let startX = 0, startY = 0;
+      const track = document.getElementById('track');
+
+      let dragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startOffset = 0; // offset actuel du track au début du drag
+      let lastOffset = 0;  // offset courant pendant drag
+
+      function minOffset() { return -(maxIndex * stepPx); } // le plus à gauche
+      function maxOffset() { return 0; }                   // le plus à droite
+
+      function applyResistance(x) {
+        const min = minOffset();
+        const max = maxOffset();
+
+        if (x > max) return max + (x - max) * 0.35;
+        if (x < min) return min + (x - min) * 0.35;
+        return x;
+      }
 
       viewport.addEventListener('touchstart', (e) => {
         const t = e.touches && e.touches[0];
         if (!t) return;
+
+        dragging = true;
         startX = t.clientX;
         startY = t.clientY;
+
+        startOffset = -(currentIndex * stepPx);
+        lastOffset = startOffset;
+
+        track.style.transition = 'none';
       }, { passive: true });
 
-      viewport.addEventListener('touchend', (e) => {
-        const t = e.changedTouches && e.changedTouches[0];
+      viewport.addEventListener('touchmove', (e) => {
+        if (!dragging) return;
+        const t = e.touches && e.touches[0];
         if (!t) return;
 
         const dx = t.clientX - startX;
         const dy = t.clientY - startY;
 
+        // si c’est surtout vertical, on laisse faire (pas de drag)
         if (Math.abs(dy) > Math.abs(dx)) return;
 
-        if (dx <= -40) goTo(currentIndex + 1);
-        else if (dx >= 40) goTo(currentIndex - 1);
+        // sinon on prend la main (sinon iOS essaye de scroller/zoomer)
+        if (e.cancelable) e.preventDefault();
+
+        const x = applyResistance(startOffset + dx);
+        lastOffset = x;
+        setTrackX(x);
+      }, { passive: false });
+
+      viewport.addEventListener('touchend', () => {
+        if (!dragging) return;
+        dragging = false;
+
+        // snap sur la carte la plus proche
+        const rawIndex = Math.round((-lastOffset) / stepPx);
+        goTo(rawIndex);
+      }, { passive: true });
+
+      viewport.addEventListener('touchcancel', () => {
+        if (!dragging) return;
+        dragging = false;
+        goTo(currentIndex);
       }, { passive: true });
     }
 
@@ -310,7 +364,7 @@ async function generateStaticFeed() {
 
     window.addEventListener('load', () => {
       wireUpButtons();
-      setupSwipe();
+      setupDragSnap();
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -335,5 +389,6 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
 
