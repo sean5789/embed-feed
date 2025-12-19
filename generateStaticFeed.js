@@ -78,7 +78,7 @@ async function generateStaticFeed() {
     .video-wrapper {
       position:relative;
       width:100%;
-      height:500px; /* hauteur par défaut (petits téléphones) */
+      height:310px; /* hauteur par défaut (petits téléphones) */
     }
 
     video, img {
