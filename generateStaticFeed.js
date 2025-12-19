@@ -58,31 +58,34 @@ async function generateStaticFeed() {
     html, body {
       margin:0;
       padding:0;
+      height:100%;
       background:#fff;
       font-family:sans-serif;
 
-      /* ✅ pas de scroll horizontal global */
-      overflow-x:hidden;
+      /* ✅ on garde l'iframe propre */
+      overflow:hidden;
       overscroll-behavior:none;
     }
 
-    /* viewport : pas de hauteur figée, Bubble peut agrandir sans couper le bas */
+    /* ✅ viewport = la hauteur visible de l'iframe (Bubble) */
     #viewport {
       position: relative;
       width: 100%;
-
-      overflow-x: hidden;
-      overflow-y: visible;
-
+      height: 100vh;            /* clé : suit la height Bubble */
+      overflow: hidden;         /* pas de scroll vertical */
       padding: 10px;
       box-sizing: border-box;
-
-      touch-action: pan-y; /* swipe horizontal géré par JS */
+      touch-action: pan-y;      /* swipe horizontal géré par JS */
     }
 
-    /* track qui bouge horizontalement */
+    /* ✅ stage = ce qui se scale pour remplir la hauteur */
+    #stage {
+      transform-origin: top left;
+      will-change: transform;
+    }
+
+    /* ✅ track = ce qui se translate pour aller carte par carte */
     #track {
-      position: relative;
       display: flex;
       gap: 14px;
       width: max-content;
@@ -127,9 +130,16 @@ async function generateStaticFeed() {
       min-height: 100px;
     }
 
-    /* boutons */
+    /* ✅ boutons overlay */
+    #nav {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
     .nav-btn {
-      position: sticky; /* reste visible même si le contenu est plus haut */
+      position: absolute;
       top: 50%;
       transform: translateY(-50%);
       width: 44px;
@@ -142,31 +152,14 @@ async function generateStaticFeed() {
       line-height: 44px;
       text-align: center;
       cursor: pointer;
-      z-index: 10;
+      pointer-events: auto;
       user-select: none;
       -webkit-user-select: none;
     }
     .nav-btn:active { transform: translateY(-50%) scale(0.98); }
     #btn-prev { left: 10px; }
-    #btn-next { right: 10px; float: right; }
-
-    .nav-btn[disabled] {
-      opacity: .25;
-      cursor: default;
-    }
-
-    /* wrapper boutons pour les placer au-dessus du track */
-    #nav {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 0;
-      height: 100%;
-      pointer-events: none; /* laisse cliquer le contenu */
-    }
-    #nav .nav-btn {
-      pointer-events: auto; /* mais boutons cliquables */
-    }
+    #btn-next { right: 10px; }
+    .nav-btn[disabled] { opacity: .25; cursor: default; }
   </style>
 </head>
 <body>
@@ -176,10 +169,12 @@ async function generateStaticFeed() {
       <button id="btn-next" class="nav-btn" aria-label="Suivant">→</button>
     </div>
 
-    <div id="track">
-      ${firstBatch}
-      <div class="card" id="show-more-btn">
-        <div class="show-more-card" onclick="showMore()">➕</div>
+    <div id="stage">
+      <div id="track">
+        ${firstBatch}
+        <div class="card" id="show-more-btn">
+          <div class="show-more-card" onclick="showMore()">➕</div>
+        </div>
       </div>
     </div>
   </div>
@@ -190,10 +185,11 @@ async function generateStaticFeed() {
     const remainingPosts = ${postsJSON};
 
     let currentIndex = 0;
-    let stepPx = 179;  // 165 + 14 (mesuré au load)
+    let stepPx = 179; // 165 + 14
     let maxIndex = 0;
 
     let currentIndexLoaded = 0;
+    let stageScale = 1;
 
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
@@ -208,7 +204,19 @@ async function generateStaticFeed() {
           v.dataset.bound = "1";
           v.addEventListener("click", openCalendar);
         }
+        if (!v.dataset.measured) {
+          v.dataset.measured = "1";
+          v.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
+        }
       });
+
+      document.querySelectorAll("img").forEach(img => {
+        if (!img.dataset.measured) {
+          img.dataset.measured = "1";
+          img.addEventListener("load", () => { recalcAll(); }, { once: true });
+        }
+      });
+
       document.querySelectorAll(".sound-btn").forEach(btn => {
         if (!btn.dataset.bound) {
           btn.dataset.bound = "1";
@@ -245,7 +253,6 @@ async function generateStaticFeed() {
 
     function showMore() {
       const slice = remainingPosts.slice(currentIndexLoaded, currentIndexLoaded + BATCH_SIZE);
-      const track = document.getElementById("track");
       const btnCard = document.getElementById("show-more-btn");
 
       slice.forEach(post => {
@@ -259,17 +266,19 @@ async function generateStaticFeed() {
       }
 
       wireUpButtons();
-      recalc();
-      updateUI();
+      recalcAll();
     }
 
-    function recalc() {
+    function recalcStepAndMax() {
       const track = document.getElementById('track');
       const firstCard = track.querySelector('.card');
 
       if (firstCard) {
         const rect = firstCard.getBoundingClientRect();
-        stepPx = (rect.width || 165) + 14;
+        // rect.width est déjà "scalé" via CSS scale, donc on revient au non-scalé :
+        const visualW = rect.width || 165;
+        const baseW = visualW / (stageScale || 1);
+        stepPx = baseW + 14;
       } else {
         stepPx = 165 + 14;
       }
@@ -281,10 +290,32 @@ async function generateStaticFeed() {
       updateUI();
     }
 
+    function recalcScaleToFitHeight() {
+      const viewport = document.getElementById('viewport');
+      const stage = document.getElementById('stage');
+      if (!viewport || !stage) return;
+
+      const prev = stage.style.transform;
+      stage.style.transform = 'none';
+
+      // hauteur réelle du contenu (vidéo + titres)
+      const baseH = stage.scrollHeight || stage.getBoundingClientRect().height || 1;
+
+      stage.style.transform = prev;
+
+      const vh = viewport.clientHeight || window.innerHeight || baseH;
+
+      // ✅ on remplit la hauteur Bubble proportionnellement
+      stageScale = vh / baseH;
+
+      stage.style.transform = 'scale(' + stageScale + ')';
+    }
+
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
 
+      // translation en "base px" (avant scale) -> OK car on scale sur #stage, pas sur #track
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
 
@@ -306,11 +337,10 @@ async function generateStaticFeed() {
       document.getElementById('btn-next').addEventListener('click', next);
     }
 
-    // swipe (optionnel)
+    // swipe (bonus)
     function setupSwipe() {
       const viewport = document.getElementById('viewport');
-      let startX = 0;
-      let startY = 0;
+      let startX = 0, startY = 0;
 
       viewport.addEventListener('touchstart', (e) => {
         const t = e.touches && e.touches[0];
@@ -327,23 +357,38 @@ async function generateStaticFeed() {
         const dy = t.clientY - startY;
 
         if (Math.abs(dy) > Math.abs(dx)) return;
-
         if (dx <= -40) next();
         else if (dx >= 40) prev();
       }, { passive: true });
+    }
+
+    function recalcAll() {
+      // 1) scale pour remplir la hauteur Bubble (évite le bas coupé)
+      recalcScaleToFitHeight();
+
+      // 2) recalc step/max avec la scale actuelle
+      recalcStepAndMax();
+
+      // 3) reposition à l’index actuel
+      goTo(currentIndex);
     }
 
     window.addEventListener('load', () => {
       wireUpButtons();
       setupNavButtons();
       setupSwipe();
-      recalc();
-      goTo(0);
+
+      // laisse le layout se stabiliser (images/videos)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          recalcAll();
+          goTo(0);
+        });
+      });
     });
 
     window.addEventListener('resize', () => {
-      recalc();
-      goTo(currentIndex);
+      recalcAll();
     });
   </script>
 </body>
@@ -357,6 +402,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
 
 
