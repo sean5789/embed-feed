@@ -61,30 +61,28 @@ async function generateStaticFeed() {
       height:100%;
       background:#fff;
       font-family:sans-serif;
-
-      /* ✅ on garde l'iframe propre */
       overflow:hidden;
       overscroll-behavior:none;
     }
 
-    /* ✅ viewport = la hauteur visible de l'iframe (Bubble) */
+    /* ✅ viewport = suit la hauteur Bubble (avec marge anti-coupe iOS) */
     #viewport {
       position: relative;
       width: 100%;
-      height: 100vh;            /* clé : suit la height Bubble */
-      overflow: hidden;         /* pas de scroll vertical */
-      padding: 10px;
+      height: 100vh;
+      overflow: hidden;
+      padding: 0px;
       box-sizing: border-box;
-      touch-action: pan-y;      /* swipe horizontal géré par JS */
+      touch-action: pan-y; /* swipe horizontal géré par JS */
     }
 
-    /* ✅ stage = ce qui se scale pour remplir la hauteur */
+    /* ✅ stage = se scale pour remplir la hauteur */
     #stage {
       transform-origin: top left;
       will-change: transform;
     }
 
-    /* ✅ track = ce qui se translate pour aller carte par carte */
+    /* ✅ track = se translate pour passer carte par carte */
     #track {
       display: flex;
       gap: 14px;
@@ -129,46 +127,10 @@ async function generateStaticFeed() {
       font-size:28px; background:yellow; height:100%; cursor:pointer;
       min-height: 100px;
     }
-
-    /* ✅ boutons overlay */
-    #nav {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 10;
-    }
-
-    .nav-btn {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 44px;
-      height: 44px;
-      border: none;
-      border-radius: 999px;
-      background: rgba(0,0,0,.55);
-      color: #fff;
-      font-size: 22px;
-      line-height: 44px;
-      text-align: center;
-      cursor: pointer;
-      pointer-events: auto;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    .nav-btn:active { transform: translateY(-50%) scale(0.98); }
-    #btn-prev { left: 10px; }
-    #btn-next { right: 10px; }
-    .nav-btn[disabled] { opacity: .25; cursor: default; }
   </style>
 </head>
 <body>
   <div id="viewport">
-    <div id="nav">
-      <button id="btn-prev" class="nav-btn" aria-label="Précédent">←</button>
-      <button id="btn-next" class="nav-btn" aria-label="Suivant">→</button>
-    </div>
-
     <div id="stage">
       <div id="track">
         ${firstBatch}
@@ -275,7 +237,6 @@ async function generateStaticFeed() {
 
       if (firstCard) {
         const rect = firstCard.getBoundingClientRect();
-        // rect.width est déjà "scalé" via CSS scale, donc on revient au non-scalé :
         const visualW = rect.width || 165;
         const baseW = visualW / (stageScale || 1);
         stepPx = baseW + 14;
@@ -287,7 +248,6 @@ async function generateStaticFeed() {
       maxIndex = Math.max(0, cards.length - 1);
 
       if (currentIndex > maxIndex) currentIndex = maxIndex;
-      updateUI();
     }
 
     function recalcScaleToFitHeight() {
@@ -298,16 +258,13 @@ async function generateStaticFeed() {
       const prev = stage.style.transform;
       stage.style.transform = 'none';
 
-      // hauteur réelle du contenu (vidéo + titres)
       const baseH = stage.scrollHeight || stage.getBoundingClientRect().height || 1;
 
       stage.style.transform = prev;
 
       const vh = viewport.clientHeight || window.innerHeight || baseH;
 
-      // ✅ on remplit la hauteur Bubble proportionnellement
       stageScale = vh / baseH;
-
       stage.style.transform = 'scale(' + stageScale + ')';
     }
 
@@ -315,29 +272,11 @@ async function generateStaticFeed() {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
 
-      // translation en "base px" (avant scale) -> OK car on scale sur #stage, pas sur #track
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
-
-      updateUI();
     }
 
-    function updateUI() {
-      const btnPrev = document.getElementById('btn-prev');
-      const btnNext = document.getElementById('btn-next');
-      btnPrev.disabled = currentIndex <= 0;
-      btnNext.disabled = currentIndex >= maxIndex;
-    }
-
-    function next() { goTo(currentIndex + 1); }
-    function prev() { goTo(currentIndex - 1); }
-
-    function setupNavButtons() {
-      document.getElementById('btn-prev').addEventListener('click', prev);
-      document.getElementById('btn-next').addEventListener('click', next);
-    }
-
-    // swipe (bonus)
+    // swipe "un par un"
     function setupSwipe() {
       const viewport = document.getElementById('viewport');
       let startX = 0, startY = 0;
@@ -357,28 +296,22 @@ async function generateStaticFeed() {
         const dy = t.clientY - startY;
 
         if (Math.abs(dy) > Math.abs(dx)) return;
-        if (dx <= -40) next();
-        else if (dx >= 40) prev();
+
+        if (dx <= -40) goTo(currentIndex + 1);
+        else if (dx >= 40) goTo(currentIndex - 1);
       }, { passive: true });
     }
 
     function recalcAll() {
-      // 1) scale pour remplir la hauteur Bubble (évite le bas coupé)
       recalcScaleToFitHeight();
-
-      // 2) recalc step/max avec la scale actuelle
       recalcStepAndMax();
-
-      // 3) reposition à l’index actuel
       goTo(currentIndex);
     }
 
     window.addEventListener('load', () => {
       wireUpButtons();
-      setupNavButtons();
       setupSwipe();
 
-      // laisse le layout se stabiliser (images/videos)
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           recalcAll();
