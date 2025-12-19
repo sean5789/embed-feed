@@ -62,19 +62,16 @@ async function generateStaticFeed() {
       background:#fff;
       font-family:sans-serif;
 
-      /* pas de scroll vertical global */
+      /* pas de scroll vertical, on gère le pan horizontal nous-mêmes */
       overflow:hidden;
       overscroll-behavior:none;
-      touch-action: pan-x;
     }
 
-    /* viewport scrollable (scroll natif si possible, sinon drag JS) */
+    /* viewport (pas de scroll natif) */
     #feed {
       position:relative;
       height:100%;
-      overflow-x: scroll;
-      overflow-y: hidden;
-      -webkit-overflow-scrolling: touch;
+      overflow:hidden;
 
       padding:10px;
       box-sizing:border-box;
@@ -83,34 +80,23 @@ async function generateStaticFeed() {
       -webkit-user-select:none;
       -webkit-touch-callout:none;
 
+      touch-action: pan-x; /* on veut le geste horizontal */
       cursor: grab;
-
-      /* IMPORTANT perf + fluidité */
-      scroll-behavior: auto;
-      will-change: scroll-position;
-      contain: content;
     }
     #feed.dragging { cursor: grabbing; }
 
-    #feed::-webkit-scrollbar { display:none; }
-    #feed { scrollbar-width:none; }
-
-    /* spacer = vraie largeur scrollable (utile avec transform) */
-    #spacer {
-      height: 1px;
-      width: 1px; /* set en JS */
-    }
-
-    /* contenu affiché et scalé (ne scrolle pas lui-même) */
+    /* contenu (scalé + translaté GPU) */
     #content {
       position:absolute;
-      top:10px;  /* doit matcher padding #feed */
-      left:10px; /* doit matcher padding #feed */
-      transform-origin: top left;
+      top:10px;
+      left:10px;
+
       display:flex;
       gap:14px;
       width:max-content;
       align-items:stretch;
+
+      transform-origin: top left;
       will-change: transform;
     }
 
@@ -153,8 +139,6 @@ async function generateStaticFeed() {
 </head>
 <body>
   <div id="feed">
-    <div id="spacer"></div>
-
     <div id="content">
       ${firstBatch}
       <div class="card" id="show-more-btn">
@@ -244,30 +228,65 @@ async function generateStaticFeed() {
       });
     }
 
-    // ===== Scale basé sur hauteur + spacer pour scrollWidth correct =====
-    function refreshLayout() {
+    // ===== SCALE (basé sur hauteur) + "scroll" via translate3d =====
+    let scale = 1;
+    let baseW = 0;
+    let baseH = 0;
+
+    // position de scroll en px (positif = on va vers la droite dans le contenu)
+    let scrollX = 0;
+
+    function measureContent() {
       const content = document.getElementById('content');
-      const spacer = document.getElementById('spacer');
-      if (!content || !spacer) return;
+      if (!content) return;
 
       const prev = content.style.transform;
       content.style.transform = 'none';
-
-      const baseW = content.scrollWidth;
-      const baseH = content.scrollHeight;
-
+      baseW = content.scrollWidth;
+      baseH = content.scrollHeight;
       content.style.transform = prev;
-
-      const vh = window.innerHeight || document.documentElement.clientHeight || baseH;
-      const scale = vh / baseH;
-
-      content.style.transform = 'scale(' + scale + ')';
-
-      const scaledW = Math.ceil(baseW * scale);
-      spacer.style.width = (scaledW + 20) + 'px'; // + padding left/right (10+10)
     }
 
-    // ===== Drag-to-scroll fluide (rAF + inertie) =====
+    function clampScrollX(x) {
+      const feed = document.getElementById('feed');
+      if (!feed) return 0;
+
+      const vw = feed.clientWidth - 20; // padding left+right (10+10)
+      const scaledW = baseW * scale;
+
+      const maxX = Math.max(0, scaledW - vw);
+      if (x < 0) return 0;
+      if (x > maxX) return maxX;
+      return x;
+    }
+
+    function applyTransform() {
+      const content = document.getElementById('content');
+      if (!content) return;
+
+      // translate = -scrollX (on déplace le contenu vers la gauche)
+      const tx = -scrollX;
+
+      // GPU transform: translate3d + scale
+      content.style.transform = 'translate3d(' + tx + 'px, 0, 0) scale(' + scale + ')';
+    }
+
+    function refreshLayout() {
+      const feed = document.getElementById('feed');
+      if (!feed) return;
+
+      measureContent();
+      const vh = window.innerHeight || document.documentElement.clientHeight || baseH;
+
+      scale = vh / baseH;
+
+      // clamp la position actuelle avec la nouvelle scale
+      scrollX = clampScrollX(scrollX);
+
+      applyTransform();
+    }
+
+    // ===== Drag fluide + inertie (sur scrollX) =====
     function enableDragScroll() {
       const feed = document.getElementById('feed');
       if (!feed) return;
@@ -275,35 +294,28 @@ async function generateStaticFeed() {
       let isDown = false;
       let startX = 0;
       let startY = 0;
-      let startScrollLeft = 0;
+      let startScrollX = 0;
 
-      // rAF throttling
-      let targetScrollLeft = 0;
+      // rAF
       let rafId = null;
+      let targetX = 0;
 
       // inertie
       let lastX = 0;
       let lastT = 0;
-      let velocity = 0;
+      let v = 0;
       let inertiaRaf = null;
 
       const THRESH = 6;
+      const FRICTION = 0.95;
 
-      function clampScroll(x) {
-        const max = feed.scrollWidth - feed.clientWidth;
-        if (x < 0) return 0;
-        if (x > max) return max;
-        return x;
-      }
-
-      function applyScroll() {
-        rafId = null;
-        feed.scrollLeft = clampScroll(targetScrollLeft);
-      }
-
-      function scheduleScroll() {
+      function schedule() {
         if (rafId) return;
-        rafId = requestAnimationFrame(applyScroll);
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          scrollX = clampScrollX(targetX);
+          applyTransform();
+        });
       }
 
       function stopInertia() {
@@ -312,29 +324,26 @@ async function generateStaticFeed() {
       }
 
       function runInertia() {
-        const FRICTION = 0.95;
-
         function step() {
-          velocity *= FRICTION;
-
-          if (Math.abs(velocity) < 0.02) {
+          v *= FRICTION;
+          if (Math.abs(v) < 0.02) {
             inertiaRaf = null;
             return;
           }
 
-          targetScrollLeft = feed.scrollLeft + velocity * 16;
-          feed.scrollLeft = clampScroll(targetScrollLeft);
+          targetX = scrollX + v * 16; // 16ms approx
+          scrollX = clampScrollX(targetX);
+          applyTransform();
 
-          const atLeft = feed.scrollLeft <= 0;
-          const atRight = feed.scrollLeft >= feed.scrollWidth - feed.clientWidth - 1;
-          if ((atLeft && velocity < 0) || (atRight && velocity > 0)) {
+          // stop aux bords
+          const clamped = clampScrollX(targetX);
+          if (clamped !== targetX) {
             inertiaRaf = null;
             return;
           }
 
           inertiaRaf = requestAnimationFrame(step);
         }
-
         inertiaRaf = requestAnimationFrame(step);
       }
 
@@ -342,12 +351,11 @@ async function generateStaticFeed() {
         isDown = true;
         startX = x;
         startY = y;
-        startScrollLeft = feed.scrollLeft;
-        targetScrollLeft = startScrollLeft;
+        startScrollX = scrollX;
 
         lastX = x;
         lastT = performance.now();
-        velocity = 0;
+        v = 0;
 
         stopInertia();
         feed.classList.add('dragging');
@@ -364,13 +372,17 @@ async function generateStaticFeed() {
 
         if (e && e.cancelable) e.preventDefault();
 
-        targetScrollLeft = startScrollLeft - dx;
-        scheduleScroll();
+        // dx>0 (finger to right) => on veut aller vers la gauche => scrollX diminue
+        targetX = startScrollX - dx;
+        schedule();
 
         const now = performance.now();
         const dt = Math.max(1, now - lastT);
         const vx = (lastX - x) / dt; // px/ms
-        velocity = velocity * 0.8 + (vx * 1000) * 0.2; // px/s approx
+        // px/s -> puis converti en px/frame plus bas
+        const vps = vx * 1000;
+        // smoothing
+        v = v * 0.8 + vps * 0.2;
 
         lastX = x;
         lastT = now;
@@ -381,11 +393,10 @@ async function generateStaticFeed() {
         isDown = false;
         feed.classList.remove('dragging');
 
-        velocity = velocity * 0.016; // px/frame
+        // px/s -> px/frame (~16ms)
+        v = v * 0.016;
 
-        if (Math.abs(velocity) > 0.5) {
-          runInertia();
-        }
+        if (Math.abs(v) > 0.5) runInertia();
       }
 
       // Touch
@@ -413,12 +424,13 @@ async function generateStaticFeed() {
     window.addEventListener('load', () => {
       wireUpButtons();
       enableDragScroll();
-      requestAnimationFrame(() => {
-        requestAnimationFrame(refreshLayout);
-      });
+      requestAnimationFrame(() => requestAnimationFrame(refreshLayout));
     });
 
-    window.addEventListener('resize', refreshLayout);
+    window.addEventListener('resize', () => {
+      refreshLayout();
+    });
+    // ==========================================================
   </script>
 </body>
 </html>`;
@@ -431,4 +443,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
