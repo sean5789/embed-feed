@@ -4,7 +4,7 @@ const axios = require('axios');
 
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
-const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
+const CAL_URL = 'https://www.theushuaiaexperience.com/en/club/calendar';
 const OUTPUT_FILE = 'index.html';
 const BATCH_SIZE = 5;
 
@@ -13,10 +13,14 @@ async function generateStaticFeed() {
     if (!API_KEY) throw new Error('❌ EMBEDSOCIAL_API_KEY est manquant.');
 
     console.log('📡 Connexion à l’API EmbedSocial...');
+
     const url = `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${ALBUM_REF}`;
 
     const res = await axios.get(url, {
-      headers: { Authorization: `Bearer ${API_KEY}`, Accept: 'application/json' },
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        Accept: 'application/json',
+      },
       timeout: 20000,
     });
 
@@ -28,7 +32,10 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
+    const firstBatch = postsForClient
+      .slice(0, BATCH_SIZE)
+      .map(
+        post => `
       <div class="card">
         <div class="video-wrapper">
           ${
@@ -41,10 +48,13 @@ async function generateStaticFeed() {
         <div class="info">
           <div class="emoji">🥳</div>
           <div class="date">In 2025 ! ✈️🌍</div>
-          <div class="tag"><a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
+          <div class="tag">
+            <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+          </div>
         </div>
-      </div>
-    `).join("\n");
+      </div>`
+      )
+      .join('\n');
 
     const postsJSON = JSON.stringify(postsForClient.slice(BATCH_SIZE));
 
@@ -55,91 +65,100 @@ async function generateStaticFeed() {
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    html, body { margin:0; padding:0; background:#fff; font-family:sans-serif; }
-    .grid {
-      display:flex;
-      overflow-x:auto;
-      gap:14px;
-      padding:10px;
-      scroll-behavior:smooth;
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: sans-serif;
     }
-    .grid::-webkit-scrollbar { display:none; }
+
+    .grid {
+      display: flex;
+      overflow-x: auto;
+      gap: 14px;
+      padding: 10px;
+      scroll-behavior: smooth;
+    }
+
+    .grid::-webkit-scrollbar {
+      display: none;
+    }
 
     .card {
-      flex:0 0 auto;
-      width:165px;
-      background:#fff;
-      border-radius:16px;
-      overflow:hidden;
-      text-align:center;
+      flex: 0 0 auto;
+      width: 165px;
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      text-align: center;
     }
 
-    /* petits téléphones */
-.video-wrapper {
-  height:210px;
-}
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+    }
 
-/* iPhone 15 (≈ 393px) */
-@media (min-width: 390px) and (max-width: 429px) {
-  .video-wrapper {
-    height:100px;
-  }
-}
-
-/* iPhone 15 Pro Max et + */
-@media (min-width: 430px) and (max-width: 767px) {
-  .video-wrapper {
-    height:260px;
-  }
-}
-
-/* Tablettes */
-@media (min-width: 768px) {
-  .video-wrapper {
-    height:320px;
-  }
-}
-
-    /* ---- fin partie responsive ---- */
+    video,
+    img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+    }
 
     .sound-btn {
-      position:absolute;
-      bottom:10px;
-      right:6px;
-      width:26px;
-      height:26px;
-      background:rgba(0,0,0,.6);
-      border:none;
-      border-radius:50%;
-      cursor:pointer;
-      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat:no-repeat;
-      background-position:center;
-      background-size:60%;
+      position: absolute;
+      bottom: 10px;
+      right: 6px;
+      width: 26px;
+      height: 26px;
+      background: rgba(0,0,0,.6);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      background-image: url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 60%;
     }
 
-    .info { padding:6px 10px 2px; text-align:center; }
-    .emoji { font-size:24px; }
-    .date { font-size:15px; color:#444; font-weight:bold; }
-    .tag { margin-top:6px; display:inline-block; }
+    .info {
+      padding: 6px 10px 2px;
+      text-align: center;
+    }
+
+    .emoji {
+      font-size: 24px;
+    }
+
+    .date {
+      font-size: 15px;
+      color: #444;
+      font-weight: bold;
+    }
+
+    .tag {
+      margin-top: 6px;
+      display: inline-block;
+    }
+
     .tag a {
-      color:inherit;
-      text-decoration:none;
-      display:inline-block;
-      background:yellow;
-      font-weight:bold;
-      padding:6px;
-      border-radius:6px;
+      color: inherit;
+      text-decoration: none;
+      display: inline-block;
+      background: yellow;
+      font-weight: bold;
+      padding: 6px;
+      border-radius: 6px;
     }
 
     .show-more-card {
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:28px;
-      background:yellow;
-      height:100%;
-      cursor:pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      background: yellow;
+      height: 100%;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -160,7 +179,9 @@ async function generateStaticFeed() {
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
       if (!w) {
-        try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_) {}
+        try {
+          parent.postMessage({ type: "openExternal", url: CAL_URL }, "*");
+        } catch (_) {}
       }
     }
 
@@ -182,7 +203,9 @@ async function generateStaticFeed() {
           <div class="info">
             <div class="emoji">🥳</div>
             <div class="date">In 2025 ! ✈️🌍</div>
-            <div class="tag"><a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
+            <div class="tag">
+              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a>
+            </div>
           </div>
         </div>\`;
     }
@@ -212,6 +235,7 @@ async function generateStaticFeed() {
           v.addEventListener("click", openCalendar);
         }
       });
+
       document.querySelectorAll(".sound-btn").forEach(btn => {
         if (!btn.dataset.bound) {
           btn.dataset.bound = "1";
@@ -236,5 +260,6 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
 
