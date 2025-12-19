@@ -6,8 +6,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body { margin:0; padding:0; background:#fff; font-family:sans-serif; }
-    .grid { display:flex; overflow-x:auto; gap:14px; padding:10px; scroll-behavior:smooth; }
+    .grid {
+      display:flex;
+      overflow-x:auto;
+      gap:14px;
+      padding:10px;
+      scroll-behavior:smooth;
+    }
     .grid::-webkit-scrollbar { display:none; }
+
     .card {
       flex:0 0 auto;
       width:165px;
@@ -16,14 +23,52 @@
       overflow:hidden;
       text-align:center;
     }
-    .video-wrapper { position:relative; width:100%; }
-    video, img { width:100%; display:block; object-fit:cover; }
-    .sound-btn {
-      position:absolute; bottom:10px; right:6px; width:26px; height:26px;
-      background:rgba(0,0,0,.6); border:none; border-radius:50%; cursor:pointer;
-      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat:no-repeat; background-position:center; background-size:60%;
+
+    /* ---- ICI : gestion de la hauteur vidéo réactive ---- */
+    .video-wrapper {
+      position:relative;
+      width:100%;
+      height:220px; /* hauteur par défaut (petits téléphones) */
     }
+
+    video, img {
+      width:100%;
+      height:100%;      /* la vidéo remplit le wrapper */
+      display:block;
+      object-fit:cover;
+    }
+
+    /* grands téléphones (ex: iPhone 15 Pro Max ≈ 430px+) */
+    @media (min-width: 430px) {
+      .video-wrapper {
+        height:300px;
+      }
+    }
+
+    /* tablettes et + */
+    @media (min-width: 768px) {
+      .video-wrapper {
+        height:360px;
+      }
+    }
+    /* ---- fin partie responsive ---- */
+
+    .sound-btn {
+      position:absolute;
+      bottom:10px;
+      right:6px;
+      width:26px;
+      height:26px;
+      background:rgba(0,0,0,.6);
+      border:none;
+      border-radius:50%;
+      cursor:pointer;
+      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+      background-repeat:no-repeat;
+      background-position:center;
+      background-size:60%;
+    }
+
     .info { padding:6px 10px 2px; text-align:center; }
     .emoji { font-size:24px; }
     .date { font-size:15px; color:#444; font-weight:bold; }
@@ -37,6 +82,7 @@
       padding:6px;
       border-radius:6px;
     }
+
     .show-more-card {
       display:flex;
       align-items:center;
