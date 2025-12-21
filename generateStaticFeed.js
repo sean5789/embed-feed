@@ -33,7 +33,15 @@ async function generateStaticFeed() {
         <div class="video-wrapper">
           ${
             post.video
-              ? `<video src="${post.video}" autoplay muted loop playsinline loading="lazy"></video>
+              ? `<video
+                   src="${post.video}"
+                   autoplay
+                   muted
+                   loop
+                   playsinline
+                   webkit-playsinline
+                   preload="metadata"
+                 ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
               : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
@@ -153,6 +161,116 @@ async function generateStaticFeed() {
     let currentIndexLoaded = 0;
     let stageScale = 1;
 
+    // --- ✅ Anti-arrêt vidéo: retry play + relance sur visibilité / réseau / pageshow ---
+    const VideoKeeper = (() => {
+      const RETRY_DELAYS = [200, 500, 1200, 2500];
+      let intervalId = null;
+
+      function safePlay(v) {
+        try {
+          // garde-fous pour autoplay
+          v.muted = true;
+          v.loop = true;
+          v.playsInline = true;
+          v.setAttribute('muted', '');
+          v.setAttribute('loop', '');
+          v.setAttribute('playsinline', '');
+          v.setAttribute('webkit-playsinline', '');
+
+          const p = v.play();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        } catch (_) {}
+      }
+
+      function ensureLoop(v) {
+        // si jamais 'ended' arrive malgré loop (iOS / glitch réseau)
+        try {
+          v.currentTime = 0;
+        } catch(_) {}
+        safePlay(v);
+      }
+
+      function attach(v) {
+        if (v.dataset.keeperBound) return;
+        v.dataset.keeperBound = "1";
+
+        // certains navigateurs stoppent après "stalled/waiting" puis ne repartent pas
+        const retry = (attempt = 0) => {
+          safePlay(v);
+          const delay = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)];
+          setTimeout(() => {
+            // si toujours en pause alors qu'on est visible -> on retente
+            if (!document.hidden && v.paused) retry(attempt + 1);
+          }, delay);
+        };
+
+        v.addEventListener('ended', () => ensureLoop(v));
+        v.addEventListener('pause', () => {
+          // si la page est visible, on force la reprise
+          if (!document.hidden) retry(0);
+        });
+        v.addEventListener('stalled', () => retry(0));
+        v.addEventListener('waiting', () => retry(0));
+        v.addEventListener('suspend', () => {
+          // parfois après réseau instable, le navigateur "suspend"
+          if (!document.hidden) retry(0);
+        });
+
+        // dès qu'il peut rejouer, on relance
+        v.addEventListener('canplay', () => { if (!document.hidden) safePlay(v); });
+        v.addEventListener('loadeddata', () => { if (!document.hidden) safePlay(v); });
+        v.addEventListener('playing', () => { /* ok */ });
+
+        // si metadata arrive tard, on tente quand même
+        setTimeout(() => { if (!document.hidden) safePlay(v); }, 0);
+      }
+
+      function wireAll() {
+        document.querySelectorAll('video').forEach(v => {
+          attach(v);
+          // si le navigateur n'a pas encore démarré, on pousse un play
+          if (!document.hidden) safePlay(v);
+        });
+      }
+
+      function startWatchdog() {
+        // Watchdog léger: si une vidéo visible est en pause, on relance.
+        if (intervalId) clearInterval(intervalId);
+        intervalId = setInterval(() => {
+          if (document.hidden) return;
+          document.querySelectorAll('video').forEach(v => {
+            // si le stream est bloqué et pause, on relance
+            if (v.paused) safePlay(v);
+          });
+        }, 2500);
+      }
+
+      function onVisibilityOrReturn() {
+        // au retour sur l'onglet / après navigation bfcache / focus
+        if (!document.hidden) {
+          wireAll();
+          startWatchdog();
+        }
+      }
+
+      function init() {
+        wireAll();
+        startWatchdog();
+
+        document.addEventListener('visibilitychange', onVisibilityOrReturn);
+        window.addEventListener('focus', onVisibilityOrReturn);
+        window.addEventListener('pageshow', onVisibilityOrReturn); // important bfcache iOS/Safari
+        window.addEventListener('online', onVisibilityOrReturn);   // retour réseau
+
+        // optionnel: si Bubble / WebView tue les médias lors d'un resize
+        window.addEventListener('resize', () => {
+          if (!document.hidden) wireAll();
+        });
+      }
+
+      return { init, wireAll };
+    })();
+
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
       if (!w) {
@@ -188,13 +306,24 @@ async function generateStaticFeed() {
           });
         }
       });
+
+      // ✅ important: on (re)branche le "keeper" à chaque ajout de cartes
+      VideoKeeper.wireAll();
     }
 
     function createCard(post) {
       const media = post.video
         ? \`
           <div class="video-wrapper">
-            <video src="\${post.video}" autoplay muted loop playsinline loading="lazy"></video>
+            <video
+              src="\${post.video}"
+              autoplay
+              muted
+              loop
+              playsinline
+              webkit-playsinline
+              preload="metadata"
+            ></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>\`
         : \`
@@ -312,6 +441,9 @@ async function generateStaticFeed() {
       wireUpButtons();
       setupSwipe();
 
+      // ✅ init anti-arrêt vidéo (relance en cas de retour réseau / onglet / navigation)
+      VideoKeeper.init();
+
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           recalcAll();
@@ -328,12 +460,13 @@ async function generateStaticFeed() {
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
-    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
+    console.log(\`✅ \${OUTPUT_FILE} généré avec succès.\`);
   } catch (err) {
     console.error('❌ Erreur :', err?.response?.data || err.message);
   }
 }
 
 generateStaticFeed();
+
 
 
