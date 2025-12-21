@@ -34,14 +34,16 @@ async function generateStaticFeed() {
           ${
             post.video
               ? `<video
-                   src="${post.video}"
-                   autoplay
-                   muted
-                   loop
-                   playsinline
-                   webkit-playsinline
-                   preload="metadata"
-                 ></video>
+                    src="${post.video}"
+                    autoplay
+                    muted
+                    loop
+                    playsinline
+                    preload="auto"
+                    webkit-playsinline
+                    disablepictureinpicture
+                    loading="lazy"
+                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
               : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
@@ -73,7 +75,6 @@ async function generateStaticFeed() {
       overscroll-behavior:none;
     }
 
-    /* ✅ viewport = suit la hauteur Bubble (avec marge anti-coupe iOS) */
     #viewport {
       position: relative;
       width: 100%;
@@ -81,16 +82,14 @@ async function generateStaticFeed() {
       overflow: hidden;
       padding: 0px;
       box-sizing: border-box;
-      touch-action: pan-y; /* swipe horizontal géré par JS */
+      touch-action: pan-y;
     }
 
-    /* ✅ stage = se scale pour remplir la hauteur */
     #stage {
       transform-origin: top left;
       will-change: transform;
     }
 
-    /* ✅ track = se translate pour passer carte par carte */
     #track {
       display: flex;
       gap: 14px;
@@ -161,115 +160,82 @@ async function generateStaticFeed() {
     let currentIndexLoaded = 0;
     let stageScale = 1;
 
-    // --- ✅ Anti-arrêt vidéo: retry play + relance sur visibilité / réseau / pageshow ---
-    const VideoKeeper = (() => {
-      const RETRY_DELAYS = [200, 500, 1200, 2500];
-      let intervalId = null;
+    // --- ✅ VIDEO KEEP-ALIVE (anti pause après reconnexion / changements d'onglet) ---
+    function safePlay(video) {
+      if (!video) return;
 
-      function safePlay(v) {
-        try {
-          // garde-fous pour autoplay
-          v.muted = true;
-          v.loop = true;
-          v.playsInline = true;
-          v.setAttribute('muted', '');
-          v.setAttribute('loop', '');
-          v.setAttribute('playsinline', '');
-          v.setAttribute('webkit-playsinline', '');
+      // On (re)force les attributs "safe autoplay"
+      video.muted = true;
+      video.autoplay = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.setAttribute('playsinline', '');
+      video.setAttribute('webkit-playsinline', '');
+      video.setAttribute('muted', '');
+      video.setAttribute('autoplay', '');
+      video.setAttribute('loop', '');
+      video.preload = 'auto';
 
-          const p = v.play();
-          if (p && typeof p.catch === 'function') p.catch(() => {});
-        } catch (_) {}
-      }
+      const tryPlay = () => {
+        // Si déjà en lecture et non stoppé, on ne fait rien
+        if (!video.paused && !video.ended) return;
 
-      function ensureLoop(v) {
-        // si jamais 'ended' arrive malgré loop (iOS / glitch réseau)
-        try {
-          v.currentTime = 0;
-        } catch(_) {}
-        safePlay(v);
-      }
-
-      function attach(v) {
-        if (v.dataset.keeperBound) return;
-        v.dataset.keeperBound = "1";
-
-        // certains navigateurs stoppent après "stalled/waiting" puis ne repartent pas
-        const retry = (attempt = 0) => {
-          safePlay(v);
-          const delay = RETRY_DELAYS[Math.min(attempt, RETRY_DELAYS.length - 1)];
-          setTimeout(() => {
-            // si toujours en pause alors qu'on est visible -> on retente
-            if (!document.hidden && v.paused) retry(attempt + 1);
-          }, delay);
-        };
-
-        v.addEventListener('ended', () => ensureLoop(v));
-        v.addEventListener('pause', () => {
-          // si la page est visible, on force la reprise
-          if (!document.hidden) retry(0);
-        });
-        v.addEventListener('stalled', () => retry(0));
-        v.addEventListener('waiting', () => retry(0));
-        v.addEventListener('suspend', () => {
-          // parfois après réseau instable, le navigateur "suspend"
-          if (!document.hidden) retry(0);
-        });
-
-        // dès qu'il peut rejouer, on relance
-        v.addEventListener('canplay', () => { if (!document.hidden) safePlay(v); });
-        v.addEventListener('loadeddata', () => { if (!document.hidden) safePlay(v); });
-        v.addEventListener('playing', () => { /* ok */ });
-
-        // si metadata arrive tard, on tente quand même
-        setTimeout(() => { if (!document.hidden) safePlay(v); }, 0);
-      }
-
-      function wireAll() {
-        document.querySelectorAll('video').forEach(v => {
-          attach(v);
-          // si le navigateur n'a pas encore démarré, on pousse un play
-          if (!document.hidden) safePlay(v);
-        });
-      }
-
-      function startWatchdog() {
-        // Watchdog léger: si une vidéo visible est en pause, on relance.
-        if (intervalId) clearInterval(intervalId);
-        intervalId = setInterval(() => {
-          if (document.hidden) return;
-          document.querySelectorAll('video').forEach(v => {
-            // si le stream est bloqué et pause, on relance
-            if (v.paused) safePlay(v);
+        const p = video.play();
+        if (p && typeof p.catch === "function") {
+          p.catch(() => {
+            // On ignore : parfois Safari refuse temporairement.
+            // On retentera via watchdog / events.
           });
-        }, 2500);
-      }
-
-      function onVisibilityOrReturn() {
-        // au retour sur l'onglet / après navigation bfcache / focus
-        if (!document.hidden) {
-          wireAll();
-          startWatchdog();
         }
-      }
+      };
 
-      function init() {
-        wireAll();
-        startWatchdog();
+      // si metadata pas prête, on essaie quand même, et on réessaie au bon moment
+      tryPlay();
 
-        document.addEventListener('visibilitychange', onVisibilityOrReturn);
-        window.addEventListener('focus', onVisibilityOrReturn);
-        window.addEventListener('pageshow', onVisibilityOrReturn); // important bfcache iOS/Safari
-        window.addEventListener('online', onVisibilityOrReturn);   // retour réseau
+      if (!video.dataset.keepaliveBound) {
+        video.dataset.keepaliveBound = "1";
 
-        // optionnel: si Bubble / WebView tue les médias lors d'un resize
-        window.addEventListener('resize', () => {
-          if (!document.hidden) wireAll();
+        // Quand ça se termine malgré loop (ça arrive), on redémarre
+        video.addEventListener('ended', () => {
+          try { video.currentTime = 0; } catch(_) {}
+          tryPlay();
         });
-      }
 
-      return { init, wireAll };
-    })();
+        // Si pause / stall / waiting, on retente
+        ['pause','stalled','suspend','waiting','emptied','abort','error'].forEach(evt => {
+          video.addEventListener(evt, () => {
+            // micro délai = laisse le navigateur se stabiliser
+            setTimeout(tryPlay, 200);
+            setTimeout(tryPlay, 800);
+          });
+        });
+
+        // iOS parfois coupe la vidéo si pas "active" : au retour, on relance
+        video.addEventListener('loadeddata', () => setTimeout(tryPlay, 50));
+        video.addEventListener('canplay', () => setTimeout(tryPlay, 50));
+        video.addEventListener('canplaythrough', () => setTimeout(tryPlay, 50));
+      }
+    }
+
+    function keepAliveAllVideos() {
+      document.querySelectorAll("video").forEach(v => safePlay(v));
+    }
+
+    // watchdog global : relance régulièrement (léger, mais efficace)
+    setInterval(() => {
+      // évite de spammer si onglet caché
+      if (document.hidden) return;
+      keepAliveAllVideos();
+    }, 2500);
+
+    // évènements globaux importants
+    window.addEventListener('online', () => setTimeout(keepAliveAllVideos, 200));
+    window.addEventListener('focus', () => setTimeout(keepAliveAllVideos, 200));
+    window.addEventListener('pageshow', () => setTimeout(keepAliveAllVideos, 200)); // BFCache Safari
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) setTimeout(keepAliveAllVideos, 200);
+    });
+    // --- fin keep-alive ---
 
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
@@ -288,6 +254,9 @@ async function generateStaticFeed() {
           v.dataset.measured = "1";
           v.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
         }
+
+        // ✅ assure la relance au binding
+        safePlay(v);
       });
 
       document.querySelectorAll("img").forEach(img => {
@@ -306,9 +275,6 @@ async function generateStaticFeed() {
           });
         }
       });
-
-      // ✅ important: on (re)branche le "keeper" à chaque ajout de cartes
-      VideoKeeper.wireAll();
     }
 
     function createCard(post) {
@@ -321,8 +287,10 @@ async function generateStaticFeed() {
               muted
               loop
               playsinline
+              preload="auto"
               webkit-playsinline
-              preload="metadata"
+              disablepictureinpicture
+              loading="lazy"
             ></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>\`
@@ -357,6 +325,7 @@ async function generateStaticFeed() {
       }
 
       wireUpButtons();
+      keepAliveAllVideos(); // ✅ relance après insertion
       recalcAll();
     }
 
@@ -403,9 +372,12 @@ async function generateStaticFeed() {
 
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+
+      // ✅ après swipe, iOS peut “freeze” des vidéos : on relance
+      setTimeout(keepAliveAllVideos, 50);
+      setTimeout(keepAliveAllVideos, 300);
     }
 
-    // swipe "un par un"
     function setupSwipe() {
       const viewport = document.getElementById('viewport');
       let startX = 0, startY = 0;
@@ -435,19 +407,18 @@ async function generateStaticFeed() {
       recalcScaleToFitHeight();
       recalcStepAndMax();
       goTo(currentIndex);
+      keepAliveAllVideos(); // ✅ dès qu’on recalcul, on garde les vidéos actives
     }
 
     window.addEventListener('load', () => {
       wireUpButtons();
       setupSwipe();
 
-      // ✅ init anti-arrêt vidéo (relance en cas de retour réseau / onglet / navigation)
-      VideoKeeper.init();
-
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           recalcAll();
           goTo(0);
+          keepAliveAllVideos();
         });
       });
     });
@@ -460,13 +431,12 @@ async function generateStaticFeed() {
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
-    console.log(\`✅ \${OUTPUT_FILE} généré avec succès.\`);
+    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
     console.error('❌ Erreur :', err?.response?.data || err.message);
   }
 }
 
 generateStaticFeed();
-
 
 
