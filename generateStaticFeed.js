@@ -1,4 +1,4 @@
-j'ai actuellement ce script : require('dotenv').config();
+je veux que l'élément html id"vercel" aille jusqu'à l'élément id "image" tout en gardant, l'agrandissement dynamique que j'ai déjà dans ce script : require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
 
@@ -330,9 +330,5 @@ async function generateStaticFeed() {
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
     console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
-    console.error('❌ Erreur :', err?.response?.data || err.message);
-  }
-}
-
-generateStaticFeed();
+    console.error('❌ Erreur :', err?.response?.data || err.mess
 
