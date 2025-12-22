@@ -1,4 +1,4 @@
-require('dotenv').config();
+j'ai actuellement ce script : require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
 
@@ -33,7 +33,7 @@ async function generateStaticFeed() {
         <div class="video-wrapper">
           ${
             post.video
-              ? `<video src="${post.video}" autoplay muted playsinline webkit-playsinline preload="auto" loading="lazy"></video>
+              ? `<video src="${post.video}" autoplay muted loop playsinline loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
               : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
@@ -65,6 +65,7 @@ async function generateStaticFeed() {
       overscroll-behavior:none;
     }
 
+    /* ✅ viewport = suit la hauteur Bubble (avec marge anti-coupe iOS) */
     #viewport {
       position: relative;
       width: 100%;
@@ -72,14 +73,16 @@ async function generateStaticFeed() {
       overflow: hidden;
       padding: 0px;
       box-sizing: border-box;
-      touch-action: pan-y;
+      touch-action: pan-y; /* swipe horizontal géré par JS */
     }
 
+    /* ✅ stage = se scale pour remplir la hauteur */
     #stage {
       transform-origin: top left;
       will-change: transform;
     }
 
+    /* ✅ track = se translate pour passer carte par carte */
     #track {
       display: flex;
       gap: 14px;
@@ -150,10 +153,6 @@ async function generateStaticFeed() {
     let currentIndexLoaded = 0;
     let stageScale = 1;
 
-    // ---- iOS/Safari resilience ----
-    const _videoRetryTimers = new WeakMap();
-    const _videoWatchdogs = new WeakMap();
-
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
       if (!w) {
@@ -161,126 +160,15 @@ async function generateStaticFeed() {
       }
     }
 
-    function hardenVideoEl(v) {
-      // Forcer les attributs/propriétés (iOS Safari est capricieux)
-      v.muted = true;
-      v.defaultMuted = true;
-      v.setAttribute('muted', '');
-      v.setAttribute('playsinline', '');
-      v.setAttribute('webkit-playsinline', '');
-      v.setAttribute('preload', 'auto');
-      v.playsInline = true;
-
-      // IMPORTANT: on ne s'appuie pas uniquement sur loop
-      // (loop peut "casser" après retours réseau / bfcache)
-      v.loop = false;
-      v.removeAttribute('loop');
-
-      // essayer d'éviter que Safari mette la vidéo en "pause" silencieuse
-      v.setAttribute('autoplay', '');
-    }
-
-    function scheduleRetry(v, delayMs) {
-      clearTimeout(_videoRetryTimers.get(v));
-      const t = setTimeout(() => tryPlayVideo(v), delayMs);
-      _videoRetryTimers.set(v, t);
-    }
-
-    async function tryPlayVideo(v) {
-      if (!v || v.readyState === 0) {
-        try { v && v.load && v.load(); } catch(_) {}
-      }
-
-      // Ne rien faire si onglet non visible : on relancera au retour
-      if (document.hidden) return;
-
-      // Si la vidéo est déjà en train de jouer, ok
-      if (!v.paused && !v.ended) return;
-
-      // S'assurer qu'elle est bien "restartable"
-      try {
-        if (v.ended) v.currentTime = 0;
-      } catch(_) {}
-
-      try {
-        const p = v.play();
-        if (p && typeof p.then === "function") {
-          await p;
-        }
-      } catch (e) {
-        // iOS peut refuser (état transitoire) => retry progressif
-        scheduleRetry(v, 600);
-      }
-    }
-
-    function ensureInfiniteLoop(v) {
-      if (!v || v.dataset.loopHardened) return;
-      v.dataset.loopHardened = "1";
-
-      hardenVideoEl(v);
-
-      // Si "ended" arrive malgré tout => restart manuel
-      v.addEventListener('ended', () => {
-        try { v.currentTime = 0; } catch(_) {}
-        tryPlayVideo(v);
-      });
-
-      // Si buffering / stalls => on retente
-      ['stalled','waiting','suspend','error','abort'].forEach(evt => {
-        v.addEventListener(evt, () => scheduleRetry(v, 700));
-      });
-
-      // Si pause "mystère" => on retente
-      v.addEventListener('pause', () => scheduleRetry(v, 500));
-
-      // Dès que ça peut jouer => play
-      v.addEventListener('canplay', () => tryPlayVideo(v));
-      v.addEventListener('loadedmetadata', () => { recalcAll(); tryPlayVideo(v); }, { once: true });
-
-      // Watchdog léger: si Safari a stoppé la vidéo, on la relance
-      if (!_videoWatchdogs.get(v)) {
-        const id = setInterval(() => {
-          if (document.hidden) return;
-          // Si la vidéo est censée tourner mais est stoppée, on relance
-          // (readyState 2+ = assez de données pour jouer)
-          if (v && (v.paused || v.ended) && v.readyState >= 2) {
-            tryPlayVideo(v);
-          }
-          // Si readyState retombe (réseau), on force un retry
-          if (v && v.readyState < 2) {
-            scheduleRetry(v, 900);
-          }
-        }, 1500);
-        _videoWatchdogs.set(v, id);
-      }
-
-      // kick initial
-      requestAnimationFrame(() => tryPlayVideo(v));
-    }
-
-    function resumeAllVideos() {
-      document.querySelectorAll('video').forEach(v => {
-        ensureInfiniteLoop(v);
-        tryPlayVideo(v);
-      });
-    }
-
-    // Quand on revient sur la page (bfcache / switch tab / retour connexion)
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) resumeAllVideos();
-    });
-    window.addEventListener('pageshow', () => resumeAllVideos());
-    window.addEventListener('focus', () => resumeAllVideos());
-    window.addEventListener('online', () => resumeAllVideos());
-    // ------------------------------
-
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
-        ensureInfiniteLoop(v);
-
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
           v.addEventListener("click", openCalendar);
+        }
+        if (!v.dataset.measured) {
+          v.dataset.measured = "1";
+          v.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
         }
       });
 
@@ -306,7 +194,7 @@ async function generateStaticFeed() {
       const media = post.video
         ? \`
           <div class="video-wrapper">
-            <video src="\${post.video}" autoplay muted playsinline webkit-playsinline preload="auto" loading="lazy"></video>
+            <video src="\${post.video}" autoplay muted loop playsinline loading="lazy"></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>\`
         : \`
@@ -341,7 +229,6 @@ async function generateStaticFeed() {
 
       wireUpButtons();
       recalcAll();
-      resumeAllVideos();
     }
 
     function recalcStepAndMax() {
@@ -389,6 +276,7 @@ async function generateStaticFeed() {
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
     }
 
+    // swipe "un par un"
     function setupSwipe() {
       const viewport = document.getElementById('viewport');
       let startX = 0, startY = 0;
@@ -411,9 +299,6 @@ async function generateStaticFeed() {
 
         if (dx <= -40) goTo(currentIndex + 1);
         else if (dx >= 40) goTo(currentIndex - 1);
-
-        // après swipe, iOS peut avoir mis pause -> on relance
-        resumeAllVideos();
       }, { passive: true });
     }
 
@@ -431,21 +316,19 @@ async function generateStaticFeed() {
         requestAnimationFrame(() => {
           recalcAll();
           goTo(0);
-          resumeAllVideos();
         });
       });
     });
 
     window.addEventListener('resize', () => {
       recalcAll();
-      resumeAllVideos();
     });
   </script>
 </body>
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
-    console.log(\`✅ \${OUTPUT_FILE} généré avec succès.\`);
+    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
     console.error('❌ Erreur :', err?.response?.data || err.message);
   }
