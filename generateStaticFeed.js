@@ -41,7 +41,9 @@ async function generateStaticFeed() {
         <div class="info">
           <div class="emoji">🥳</div>
           <div class="date">In 2025 ! ✈️🌍</div>
-          <div class="tag"><a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
+          <div class="tag">
+            <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳🎉➡️</a>
+          </div>
         </div>
       </div>
     `).join("\n");
@@ -65,7 +67,6 @@ async function generateStaticFeed() {
       overscroll-behavior:none;
     }
 
-    /* ✅ viewport = suit la hauteur Bubble (avec marge anti-coupe iOS) */
     #viewport {
       position: relative;
       width: 100%;
@@ -73,16 +74,14 @@ async function generateStaticFeed() {
       overflow: hidden;
       padding: 0px;
       box-sizing: border-box;
-      touch-action: pan-y; /* swipe horizontal géré par JS */
+      touch-action: pan-y;
     }
 
-    /* ✅ stage = se scale pour remplir la hauteur */
     #stage {
       transform-origin: top left;
       will-change: transform;
     }
 
-    /* ✅ track = se translate pour passer carte par carte */
     #track {
       display: flex;
       gap: 14px;
@@ -147,7 +146,7 @@ async function generateStaticFeed() {
     const remainingPosts = ${postsJSON};
 
     let currentIndex = 0;
-    let stepPx = 179; // 165 + 14
+    let stepPx = 179;
     let maxIndex = 0;
 
     let currentIndexLoaded = 0;
@@ -208,7 +207,9 @@ async function generateStaticFeed() {
           <div class="info">
             <div class="emoji">🥳</div>
             <div class="date">In 2025 ! ✈️🌍</div>
-            <div class="tag"><a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳➡️</a></div>
+            <div class="tag">
+              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳🎉➡️</a>
+            </div>
           </div>
         </div>\`;
     }
@@ -276,7 +277,6 @@ async function generateStaticFeed() {
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
     }
 
-    // swipe "un par un"
     function setupSwipe() {
       const viewport = document.getElementById('viewport');
       let startX = 0, startY = 0;
@@ -335,5 +335,6 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
 
