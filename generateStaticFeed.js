@@ -42,7 +42,7 @@ async function generateStaticFeed() {
           <div class="emoji">🥳</div>
           <div class="date">In 2025 ! ✈️🌍</div>
           <div class="tag">
-            <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳🎉➡️</a>
+            <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🥳🎉➡️</a>
           </div>
         </div>
       </div>
@@ -208,7 +208,7 @@ async function generateStaticFeed() {
             <div class="emoji">🥳</div>
             <div class="date">In 2025 ! ✈️🌍</div>
             <div class="tag">
-              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">🥳🎉➡️</a>
+              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🥳🎉➡️</a>
             </div>
           </div>
         </div>\`;
@@ -242,7 +242,7 @@ async function generateStaticFeed() {
         const baseW = visualW / (stageScale || 1);
         stepPx = baseW + 14;
       } else {
-        stepPx = 165 + 14;
+        stepPx = 179;
       }
 
       const cards = track.querySelectorAll('.card');
@@ -272,7 +272,6 @@ async function generateStaticFeed() {
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
-
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
     }
