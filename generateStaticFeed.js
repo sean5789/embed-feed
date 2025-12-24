@@ -112,7 +112,7 @@ async function generateStaticFeed() {
     }
 
     .info { padding:6px 10px 2px; text-align:center; }
-    .date { font-size:16px; color:#444; font-weight:bold; }
+    .date { font-size:15px; color:#444; font-weight:bold; margin-top: 10px;}
     .tag { margin-top:6px; display:inline-block; }
     .tag a {
       color:inherit; text-decoration:none; display:inline-block;
