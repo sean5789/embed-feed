@@ -39,7 +39,7 @@ async function generateStaticFeed() {
           }
         </div>
         <div class="info">
-          <div class="date"> 2025 ! ✈️🌍</div>
+          <div class="date"> En 2025 ! ✈️🌍</div>
           <div class="tag">
             <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🥳🥂🎉➡️</a>
           </div>
@@ -203,7 +203,7 @@ async function generateStaticFeed() {
         <div class="card">
           \${media}
           <div class="info">
-            <div class="date"> 2025 ! ✈️🌍</div>
+            <div class="date"> En 2025 ! ✈️🌍</div>
             <div class="tag">
               <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🥳🥂🎉➡️</a>
             </div>
