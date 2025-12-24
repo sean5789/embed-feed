@@ -8,7 +8,7 @@ const CAL_URL = "https://www.theushuaiaexperience.com/en/club/news";
 const OUTPUT_FILE = 'index.html';
 const BATCH_SIZE = 5;
 
-const LOGO_URL = "https://res.cloudinary.com/dfjpxdqd4/image/upload/v1766534521/qdakpwvyuul081k7a1yp.png";
+const LOGO_URL = "https://res.cloudinary.com/dfjpxdqd4/image/upload/v1766535101/eef_jgzeq5.svg";
 
 async function generateStaticFeed() {
   try {
@@ -124,8 +124,8 @@ video, img { width:100%; display:block; object-fit:cover; }
 }
 
 .emoji img {
-  width:40px;
-  height:40px;
+  width:35px;
+  height:35px;
   object-fit:contain;
 }
 
