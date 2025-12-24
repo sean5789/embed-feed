@@ -8,8 +8,6 @@ const CAL_URL = "https://www.theushuaiaexperience.com/en/club/news";
 const OUTPUT_FILE = 'index.html';
 const BATCH_SIZE = 5;
 
-const LOGO_URL = "https://res.cloudinary.com/dfjpxdqd4/image/upload/v1766535916/fbk_qs65lv.jpg";
-
 async function generateStaticFeed() {
   try {
     if (!API_KEY) throw new Error('❌ EMBEDSOCIAL_API_KEY est manquant.');
@@ -41,9 +39,6 @@ async function generateStaticFeed() {
           }
         </div>
         <div class="info">
-          <div class="emoji">
-            <img src="${LOGO_URL}" alt="logo" />
-          </div>
           <div class="date">In 2025 ! ✈️🌍</div>
           <div class="tag">
             <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🥳🎉➡️</a>
@@ -57,163 +52,281 @@ async function generateStaticFeed() {
     const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<title>Flux EmbedSocial</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<style>
-html, body {
-  margin:0;
-  padding:0;
-  height:100%;
-  background:#fff;
-  font-family:sans-serif;
-  overflow:hidden;
-  overscroll-behavior:none;
-}
+  <meta charset="UTF-8" />
+  <title>Flux EmbedSocial</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body {
+      margin:0;
+      padding:0;
+      height:100%;
+      background:#fff;
+      font-family:sans-serif;
+      overflow:hidden;
+      overscroll-behavior:none;
+    }
 
-#viewport {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-  touch-action: pan-y;
-}
+    #viewport {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      padding: 0px;
+      box-sizing: border-box;
+      touch-action: pan-y;
+    }
 
-#stage {
-  transform-origin: top left;
-  will-change: transform;
-}
+    #stage {
+      transform-origin: top left;
+      will-change: transform;
+    }
 
-#track {
-  display: flex;
-  gap: 14px;
-  width: max-content;
-  transition: transform 320ms cubic-bezier(.25,.8,.25,1);
-}
+    #track {
+      display: flex;
+      gap: 14px;
+      width: max-content;
+      will-change: transform;
+      transform: translate3d(0,0,0);
+      transition: transform 320ms cubic-bezier(.25,.8,.25,1);
+    }
 
-.card {
-  width:165px;
-  background:#fff;
-  border-radius:16px;
-  overflow:hidden;
-  text-align:center;
-}
+    .card {
+      flex: 0 0 auto;
+      width: 165px;
+      background:#fff;
+      border-radius:16px;
+      overflow:hidden;
+      text-align:center;
+    }
 
-.video-wrapper { position:relative; }
-video, img { width:100%; display:block; object-fit:cover; }
+    .video-wrapper { position:relative; width:100%; }
+    video, img { width:100%; height:100%; display:block; object-fit:cover; }
 
-.sound-btn {
-  position:absolute;
-  bottom:10px;
-  right:6px;
-  width:26px;
-  height:26px;
-  background:rgba(0,0,0,.6);
-  border:none;
-  border-radius:50%;
-  cursor:pointer;
-}
+    .sound-btn {
+      position:absolute; bottom:10px; right:6px;
+      width:26px; height:26px;
+      background:rgba(0,0,0,.6);
+      border:none; border-radius:50%; cursor:pointer;
+      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+      background-repeat:no-repeat; background-position:center; background-size:60%;
+    }
 
-.info { padding:6px 10px 2px; }
+    .info { padding:6px 10px 2px; text-align:center; }
+    .date { font-size:15px; color:#444; font-weight:bold; }
+    .tag { margin-top:6px; display:inline-block; }
+    .tag a {
+      color:inherit; text-decoration:none; display:inline-block;
+      background:yellow; font-weight:bold; padding:6px; border-radius:6px;
+    }
 
-.emoji {
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  margin-bottom:2px;
-}
-
-.emoji img {
-  width:35px;
-  height:35px;
-  object-fit:contain;
-}
-
-.date {
-  font-size:15px;
-  font-weight:bold;
-  color:#444;
-}
-
-.tag {
-  margin-top:6px;
-  display:inline-block;
-}
-
-.tag a {
-  background:yellow;
-  padding:6px;
-  border-radius:6px;
-  font-weight:bold;
-  text-decoration:none;
-  color:inherit;
-}
-
-.show-more-card {
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  font-size:28px;
-  background:yellow;
-  height:100%;
-  cursor:pointer;
-}
-</style>
+    .show-more-card {
+      display:flex; align-items:center; justify-content:center;
+      font-size:28px; background:yellow; height:100%; cursor:pointer;
+      min-height: 100px;
+    }
+  </style>
 </head>
 <body>
-<div id="viewport">
-  <div id="stage">
-    <div id="track">
-      ${firstBatch}
-      <div class="card" id="show-more-btn">
-        <div class="show-more-card" onclick="showMore()">➕</div>
+  <div id="viewport">
+    <div id="stage">
+      <div id="track">
+        ${firstBatch}
+        <div class="card" id="show-more-btn">
+          <div class="show-more-card" onclick="showMore()">➕</div>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<script>
-const CAL_URL = "${CAL_URL}";
-const BATCH_SIZE = ${BATCH_SIZE};
-const remainingPosts = ${postsJSON};
+  <script>
+    const CAL_URL = "${CAL_URL}";
+    const BATCH_SIZE = ${BATCH_SIZE};
+    const remainingPosts = ${postsJSON};
 
-let currentIndex = 0;
-let stepPx = 179;
+    let currentIndex = 0;
+    let stepPx = 179;
+    let maxIndex = 0;
 
-function openCalendar() {
-  window.open(CAL_URL, "_blank", "noopener,noreferrer");
-}
+    let currentIndexLoaded = 0;
+    let stageScale = 1;
 
-function createCard(post) {
-  const media = post.video
-    ? \`<video src="\${post.video}" autoplay muted loop playsinline></video>\`
-    : \`<img src="\${post.image}" loading="lazy"/>\`;
+    function openCalendar() {
+      const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
+      if (!w) {
+        try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_) {}
+      }
+    }
 
-  return \`
-  <div class="card">
-    <div class="video-wrapper">\${media}</div>
-    <div class="info">
-      <div class="emoji"><img src="${LOGO_URL}" alt="logo"/></div>
-      <div class="date">In 2025 ! ✈️🌍</div>
-      <div class="tag"><a href="\${CAL_URL}" target="_blank">✈️🥳🎉➡️</a></div>
-    </div>
-  </div>\`;
-}
+    function wireUpButtons() {
+      document.querySelectorAll("video").forEach(v => {
+        if (!v.dataset.bound) {
+          v.dataset.bound = "1";
+          v.addEventListener("click", openCalendar);
+        }
+        if (!v.dataset.measured) {
+          v.dataset.measured = "1";
+          v.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
+        }
+      });
 
-function showMore() {
-  const btn = document.getElementById("show-more-btn");
-  const slice = remainingPosts.splice(0, BATCH_SIZE);
-  slice.forEach(p => btn.insertAdjacentHTML("beforebegin", createCard(p)));
-  if (!remainingPosts.length) btn.remove();
-}
-</script>
+      document.querySelectorAll("img").forEach(img => {
+        if (!img.dataset.measured) {
+          img.dataset.measured = "1";
+          img.addEventListener("load", () => { recalcAll(); }, { once: true });
+        }
+      });
+
+      document.querySelectorAll(".sound-btn").forEach(btn => {
+        if (!btn.dataset.bound) {
+          btn.dataset.bound = "1";
+          btn.addEventListener("click", e => {
+            e.stopPropagation();
+            openCalendar();
+          });
+        }
+      });
+    }
+
+    function createCard(post) {
+      const media = post.video
+        ? \`
+          <div class="video-wrapper">
+            <video src="\${post.video}" autoplay muted loop playsinline loading="lazy"></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
+          </div>\`
+        : \`
+          <div class="video-wrapper">
+            <img src="\${post.image}" alt="post" loading="lazy" />
+          </div>\`;
+
+      return \`
+        <div class="card">
+          \${media}
+          <div class="info">
+            <div class="date">In 2025 ! ✈️🌍</div>
+            <div class="tag">
+              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🥳🎉➡️</a>
+            </div>
+          </div>
+        </div>\`;
+    }
+
+    function showMore() {
+      const slice = remainingPosts.slice(currentIndexLoaded, currentIndexLoaded + BATCH_SIZE);
+      const btnCard = document.getElementById("show-more-btn");
+
+      slice.forEach(post => {
+        btnCard.insertAdjacentHTML("beforebegin", createCard(post));
+      });
+
+      currentIndexLoaded += BATCH_SIZE;
+
+      if (currentIndexLoaded >= remainingPosts.length) {
+        btnCard.style.display = "none";
+      }
+
+      wireUpButtons();
+      recalcAll();
+    }
+
+    function recalcStepAndMax() {
+      const track = document.getElementById('track');
+      const firstCard = track.querySelector('.card');
+
+      if (firstCard) {
+        const rect = firstCard.getBoundingClientRect();
+        const visualW = rect.width || 165;
+        const baseW = visualW / (stageScale || 1);
+        stepPx = baseW + 14;
+      } else {
+        stepPx = 179;
+      }
+
+      const cards = track.querySelectorAll('.card');
+      maxIndex = Math.max(0, cards.length - 1);
+
+      if (currentIndex > maxIndex) currentIndex = maxIndex;
+    }
+
+    function recalcScaleToFitHeight() {
+      const viewport = document.getElementById('viewport');
+      const stage = document.getElementById('stage');
+      if (!viewport || !stage) return;
+
+      const prev = stage.style.transform;
+      stage.style.transform = 'none';
+
+      const baseH = stage.scrollHeight || stage.getBoundingClientRect().height || 1;
+
+      stage.style.transform = prev;
+
+      const vh = viewport.clientHeight || window.innerHeight || baseH;
+
+      stageScale = vh / baseH;
+      stage.style.transform = 'scale(' + stageScale + ')';
+    }
+
+    function goTo(index) {
+      const track = document.getElementById('track');
+      currentIndex = Math.max(0, Math.min(maxIndex, index));
+      const x = -(currentIndex * stepPx);
+      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+    }
+
+    function setupSwipe() {
+      const viewport = document.getElementById('viewport');
+      let startX = 0, startY = 0;
+
+      viewport.addEventListener('touchstart', (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        startX = t.clientX;
+        startY = t.clientY;
+      }, { passive: true });
+
+      viewport.addEventListener('touchend', (e) => {
+        const t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+
+        if (Math.abs(dy) > Math.abs(dx)) return;
+
+        if (dx <= -40) goTo(currentIndex + 1);
+        else if (dx >= 40) goTo(currentIndex - 1);
+      }, { passive: true });
+    }
+
+    function recalcAll() {
+      recalcScaleToFitHeight();
+      recalcStepAndMax();
+      goTo(currentIndex);
+    }
+
+    window.addEventListener('load', () => {
+      wireUpButtons();
+      setupSwipe();
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          recalcAll();
+          goTo(0);
+        });
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      recalcAll();
+    });
+  </script>
 </body>
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
     console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
-    console.error('❌ Erreur :', err.message);
+    console.error('❌ Erreur :', err?.response?.data || err.message);
   }
 }
 
