@@ -39,9 +39,9 @@ async function generateStaticFeed() {
           }
         </div>
         <div class="info">
-          <div class="date"> Latest News ! </div>
+          <div class="date"> In 2025 ! 🗓️ </div>
           <div class="tag">
-            <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🌎🥇🥳🎉</a>
+            <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🌎🥳🥂🎉</a>
           </div>
         </div>
       </div>
@@ -114,9 +114,8 @@ async function generateStaticFeed() {
     .info { padding:6px 10px 2px; text-align:center; }
     .date { font-size:15px; color:#444; font-weight:bold; }
     .tag { margin-top:6px; display:inline-block; }
-    .tag a {
-      color:inherit; text-decoration:none; display:inline-block;
-      background:white; font-weight:bold; padding:3px; border-radius:6px;
+    .tag a { text-decoration:none; display:inline-block;
+      background:#F5F4F4; font-weight:bold; padding:3px; border-radius:6px;
     }
 
     .show-more-card {
@@ -203,9 +202,9 @@ async function generateStaticFeed() {
         <div class="card">
           \${media}
           <div class="info">
-            <div class="date"> Latest News ! </div>
+            <div class="date"> In 2025 ! 🗓️ </div>
             <div class="tag">
-              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🌎🥇🥳🎉</a>
+              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🌎🥳🥂🎉</a>
             </div>
           </div>
         </div>\`;
