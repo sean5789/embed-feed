@@ -115,7 +115,7 @@ async function generateStaticFeed() {
     .date { font-size:15px; color:#000; font-weight:bold; margin-top: 5px;}
     .tag { margin-top:1px; display:inline-block; }
     .tag a { text-decoration:none; display:inline-block;
-      background:#F5F4F4; padding:3px; border-radius:6px; font-size: 16px;
+      background:#F5F4F4; padding:0px; border-radius:6px; font-size: 16px;
     }
 
     .show-more-card {
