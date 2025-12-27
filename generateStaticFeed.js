@@ -33,7 +33,7 @@ async function generateStaticFeed() {
         <div class="video-wrapper">
           ${
             post.video
-              ? `<video src="${post.video}" autoplay muted loop playsinline preload="auto" webkit-playsinline></video>
+              ? `<video src="${post.video}" autoplay muted loop playsinline loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
               : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
@@ -114,8 +114,7 @@ async function generateStaticFeed() {
     .info { padding:6px 10px 2px; text-align:center; }
     .date { font-size:15px; color:#444; font-weight:bold; margin-top: 1px; }
     .tag { margin-top:6px; display:inline-block; }
-    .tag a {
-      text-decoration:none; display:inline-block;
+    .tag a { text-decoration:none; display:inline-block;
       background:#F5F4F4; font-weight:bold; padding:3px; border-radius:6px;
     }
 
@@ -150,167 +149,6 @@ async function generateStaticFeed() {
     let currentIndexLoaded = 0;
     let stageScale = 1;
 
-    // =========================
-    // ✅ SAFARI / iOS WATCHDOG
-    // =========================
-    const PROGRESS_TICK_MS = 1000;       // on échantillonne la progression
-    const STUCK_AFTER_MS = 3500;         // si pas d'avancée pendant ~3.5s => suspect
-    const NEEDS_MEDIA_STATE = 2;         // HAVE_CURRENT_DATA
-    const lastTimes = new WeakMap();     // video -> { t, ts }
-    let watchdogTimer = null;
-
-    function safePlay(video) {
-      if (!video) return;
-      // assure les attributs utiles iOS
-      video.muted = true;
-      video.playsInline = true;
-      video.setAttribute('playsinline', '');
-      video.setAttribute('webkit-playsinline', '');
-      video.loop = true;
-
-      // tente play()
-      const p = video.play && video.play();
-      if (p && typeof p.catch === 'function') {
-        p.catch(() => {
-          // Sur iOS, ça peut échouer sans user gesture.
-          // On retentera au retour au premier plan / prochain tick.
-        });
-      }
-    }
-
-    function tryResumeAllVideos() {
-      document.querySelectorAll('video').forEach(v => {
-        // si iOS a mis pause ou freeze, on retente
-        if (v.readyState >= NEEDS_MEDIA_STATE && (v.paused || v.ended)) {
-          safePlay(v);
-        } else {
-          // même si "pas paused", Safari peut être figé => safePlay ne fait pas de mal
-          safePlay(v);
-        }
-      });
-    }
-
-    function markProgress(video) {
-      lastTimes.set(video, { t: video.currentTime || 0, ts: Date.now() });
-    }
-
-    function computeStuckVideos() {
-      const now = Date.now();
-      const vids = Array.from(document.querySelectorAll('video'));
-      if (!vids.length) return { stuckCount: 0, total: 0 };
-
-      let stuck = 0;
-      vids.forEach(v => {
-        // si pas assez chargé, on considère pas "stuck" (plutôt "loading")
-        if (v.readyState < NEEDS_MEDIA_STATE) return;
-
-        const info = lastTimes.get(v);
-        const cur = v.currentTime || 0;
-
-        if (!info) {
-          markProgress(v);
-          return;
-        }
-
-        const advanced = Math.abs(cur - info.t) > 0.08; // tolérance
-        if (advanced) {
-          markProgress(v);
-          return;
-        }
-
-        const age = now - info.ts;
-
-        // conditions "stuck"
-        // - pas d'avancée depuis STUCK_AFTER_MS
-        // - ET document visible (sinon normal)
-        // - ET pas en "seeking"
-        // - ET pas ended
-        if (!document.hidden && age >= STUCK_AFTER_MS && !v.seeking && !v.ended) {
-          // Safari peut "garder paused=false" tout en étant figé.
-          stuck += 1;
-        }
-      });
-
-      return { stuckCount: stuck, total: vids.length };
-    }
-
-    function notifyParentVideosStuck() {
-      try {
-        // signal au parent (Bubble) pour refresh l’iframe UNIQUEMENT si besoin
-        parent.postMessage({ type: "videos_stuck", source: "vercel-feed" }, "*");
-      } catch (_) {}
-    }
-
-    function startWatchdog() {
-      if (watchdogTimer) return;
-      // init progress map
-      document.querySelectorAll('video').forEach(v => markProgress(v));
-
-      watchdogTimer = setInterval(() => {
-        // 1) on tente de relancer les vidéos en douceur
-        tryResumeAllVideos();
-
-        // 2) on détecte si c'est vraiment figé
-        const st = computeStuckVideos();
-        if (st.total > 0 && st.stuckCount === st.total) {
-          // toutes les vidéos sont figées => là on escalade: on demande refresh iframe
-          notifyParentVideosStuck();
-        }
-      }, PROGRESS_TICK_MS);
-    }
-
-    function stopWatchdog() {
-      if (!watchdogTimer) return;
-      clearInterval(watchdogTimer);
-      watchdogTimer = null;
-    }
-
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        // retour au premier plan => on retente play et on (re)lance le watchdog
-        setTimeout(() => {
-          tryResumeAllVideos();
-          startWatchdog();
-
-          // petit check après retour premier plan:
-          setTimeout(() => {
-            const st = computeStuckVideos();
-            if (st.total > 0 && st.stuckCount === st.total) {
-              notifyParentVideosStuck();
-            }
-          }, 1200);
-        }, 150);
-      } else {
-        // en arrière plan, pas la peine de forcer
-        stopWatchdog();
-      }
-    });
-
-    // répond au parent si Bubble ping (optionnel)
-    window.addEventListener('message', (e) => {
-      const data = e && e.data;
-      if (!data || typeof data !== 'object') return;
-      if (data.type === 'ping_videos_status') {
-        const st = computeStuckVideos();
-        try {
-          e.source && e.source.postMessage({
-            type: 'videos_status',
-            stuck: (st.total > 0 && st.stuckCount === st.total),
-            stuckCount: st.stuckCount,
-            total: st.total,
-            source: 'vercel-feed'
-          }, '*');
-        } catch (_) {}
-      }
-      if (data.type === 'force_resume_videos') {
-        tryResumeAllVideos();
-      }
-    });
-
-    // =========================
-    // EXISTING LOGIC
-    // =========================
-
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
       if (!w) {
@@ -320,31 +158,10 @@ async function generateStaticFeed() {
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
-        // ✅ s'assure des attributs iOS à chaque ajout
-        v.muted = true;
-        v.loop = true;
-        v.playsInline = true;
-        v.setAttribute('playsinline', '');
-        v.setAttribute('webkit-playsinline', '');
-        v.setAttribute('preload', 'auto');
-
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
           v.addEventListener("click", openCalendar);
-
-          // ✅ si Safari déclenche pause/stalled/waiting, on retente
-          const bump = () => safePlay(v);
-          v.addEventListener('pause', bump);
-          v.addEventListener('stalled', bump);
-          v.addEventListener('waiting', bump);
-          v.addEventListener('suspend', bump);
-          v.addEventListener('ended', () => { v.currentTime = 0; safePlay(v); });
-
-          // ✅ quand on peut jouer, on lance
-          v.addEventListener('canplay', () => safePlay(v));
-          v.addEventListener('canplaythrough', () => safePlay(v));
         }
-
         if (!v.dataset.measured) {
           v.dataset.measured = "1";
           v.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
@@ -367,18 +184,13 @@ async function generateStaticFeed() {
           });
         }
       });
-
-      // ✅ (re)start watchdog dès qu'on a câblé / ajouté des vidéos
-      startWatchdog();
-      // petit kick play
-      tryResumeAllVideos();
     }
 
     function createCard(post) {
       const media = post.video
         ? \`
           <div class="video-wrapper">
-            <video src="\${post.video}" autoplay muted loop playsinline preload="auto" webkit-playsinline></video>
+            <video src="\${post.video}" autoplay muted loop playsinline loading="lazy"></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>\`
         : \`
@@ -414,6 +226,7 @@ async function generateStaticFeed() {
 
       wireUpButtons();
       recalcAll();
+      setupVideoWatchdog(); // ✅ surveille aussi les nouvelles vidéos
     }
 
     function recalcStepAndMax() {
@@ -491,6 +304,113 @@ async function generateStaticFeed() {
       goTo(currentIndex);
     }
 
+    // ============================================================
+    // ✅ WATCHDOG iOS Safari : détecte vidéos figées -> demande refresh
+    // ============================================================
+
+    let __watchdogTimer = null;
+    let __lastNotifyTs = 0;
+
+    function notifyParentVideosStalled() {
+      const now = Date.now();
+      if (now - __lastNotifyTs < 10000) return; // anti-spam 10s
+      __lastNotifyTs = now;
+
+      try {
+        parent.postMessage({ type: "VERCEL_VIDEOS_STALLED" }, "*");
+      } catch(e) {}
+    }
+
+    function tryResumeVideo(v) {
+      if (!v) return false;
+      // sur iOS, play() peut échouer sans interaction, mais parfois ça repart
+      try {
+        const p = v.play();
+        if (p && typeof p.then === "function") {
+          p.catch(() => {});
+        }
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function bindVideoProgress(v) {
+      if (v.dataset.wdBound) return;
+      v.dataset.wdBound = "1";
+      v.dataset.lastTime = String(v.currentTime || 0);
+      v.dataset.lastTs = String(Date.now());
+      v.dataset.failCount = "0";
+
+      const markProgress = () => {
+        v.dataset.lastTime = String(v.currentTime || 0);
+        v.dataset.lastTs = String(Date.now());
+        v.dataset.failCount = "0";
+      };
+
+      v.addEventListener("timeupdate", markProgress, { passive: true });
+      v.addEventListener("playing", markProgress, { passive: true });
+
+      // événements typiques de freeze iOS
+      ["stalled", "suspend", "error", "waiting"].forEach(evt => {
+        v.addEventListener(evt, () => {
+          // on tente de relancer
+          tryResumeVideo(v);
+        }, { passive: true });
+      });
+    }
+
+    function setupVideoWatchdog() {
+      document.querySelectorAll("video").forEach(bindVideoProgress);
+
+      if (__watchdogTimer) return;
+
+      __watchdogTimer = setInterval(() => {
+        if (document.visibilityState !== "visible") return;
+
+        const vids = Array.from(document.querySelectorAll("video"));
+        if (!vids.length) return;
+
+        const now = Date.now();
+
+        vids.forEach(v => {
+          if (!v) return;
+
+          // si la vidéo est pausée alors qu'elle devrait autoplay/loop, on tente play()
+          if (v.paused && !v.ended) {
+            tryResumeVideo(v);
+          }
+
+          const lastTs = Number(v.dataset.lastTs || 0);
+          const lastTime = Number(v.dataset.lastTime || 0);
+          const ct = Number(v.currentTime || 0);
+
+          // si le currentTime n'avance pas depuis > 4s alors que page visible
+          const notAdvancing = Math.abs(ct - lastTime) < 0.01;
+          const tooLong = (now - lastTs) > 4000;
+
+          if (notAdvancing && tooLong && !v.paused && !v.ended) {
+            // on tente play() 2 fois, puis on demande refresh au parent
+            const fail = Number(v.dataset.failCount || 0) + 1;
+            v.dataset.failCount = String(fail);
+
+            tryResumeVideo(v);
+
+            if (fail >= 3) {
+              notifyParentVideosStalled();
+            }
+          }
+        });
+      }, 1500);
+    }
+
+    // Au retour visible, on essaie de relancer les vidéos (SANS refresh)
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        document.querySelectorAll("video").forEach(v => tryResumeVideo(v));
+      }
+    });
+
     window.addEventListener('load', () => {
       wireUpButtons();
       setupSwipe();
@@ -499,9 +419,7 @@ async function generateStaticFeed() {
         requestAnimationFrame(() => {
           recalcAll();
           goTo(0);
-          // kick initial
-          tryResumeAllVideos();
-          startWatchdog();
+          setupVideoWatchdog(); // ✅ start watchdog
         });
       });
     });
@@ -514,13 +432,11 @@ async function generateStaticFeed() {
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
-    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
+    console.log('✅ ' + OUTPUT_FILE + ' généré avec succès.');
   } catch (err) {
     console.error('❌ Erreur :', err?.response?.data || err.message);
   }
 }
 
 generateStaticFeed();
-
-
 
