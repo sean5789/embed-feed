@@ -4,7 +4,7 @@ const axios = require('axios');
 
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
-const CAL_URL = "https://www.theushuaiaexperience.com/en/club/news";
+const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
 const OUTPUT_FILE = 'index.html';
 const BATCH_SIZE = 5;
 
@@ -39,7 +39,7 @@ async function generateStaticFeed() {
           }
         </div>
         <div class="info">
-          <div class="date"> In 2025 ! 🗓️ </div>
+          <div class="date"> In 2026 ! 🗓️ </div>
           <div class="tag">
             <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🌎🥇🥳🎉🥂</a>
           </div>
@@ -209,7 +209,7 @@ async function generateStaticFeed() {
         <div class="card">
           \${media}
           <div class="info">
-            <div class="date"> In 2025 ! 🗓️ </div>
+            <div class="date"> In 2026 ! 🗓️ </div>
             <div class="tag">
               <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">✈️🌎🥇🥳🎉🥂</a>
             </div>
