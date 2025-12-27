@@ -63,8 +63,13 @@
     .info { padding:6px 10px 2px; text-align:center; }
     .date { font-size:15px; color:#444; font-weight:bold; margin-top: 1px; }
     .tag { margin-top:6px; display:inline-block; }
-    .tag a { text-decoration:none; display:inline-block;
-      background:#F5F4F4; font-weight:bold; padding:3px; border-radius:6px;
+    .tag a {
+      text-decoration:none;
+      display:inline-block;
+      background:#F5F4F4;
+      font-weight:bold;
+      padding:3px;
+      border-radius:6px;
     }
 
     .show-more-card {
@@ -81,7 +86,7 @@
         
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/cdncache/feed-media/18074/18074297701860940/video.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          <video src="https://embedsocial.com/admin/cdncache/feed-media/18074/18074297701860940/video.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -95,7 +100,7 @@
 
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -109,7 +114,7 @@
 
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/video.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/video.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -123,7 +128,7 @@
 
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/video.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/video.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -137,7 +142,7 @@
 
       <div class="card">
         <div class="video-wrapper">
-          <video src="https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/video.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          <video src="https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/video.mp4" autoplay muted loop playsinline webkit-playsinline preload="auto" loading="lazy"></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
         </div>
         <div class="info">
@@ -167,9 +172,193 @@
     let currentIndexLoaded = 0;
     let stageScale = 1;
 
-    // ---------------------------
-    // OUVERTURE LIEN
-    // ---------------------------
+    // -----------------------------
+    // ✅ FIX iPhone Safari: relancer UNIQUEMENT les vidéos visibles
+    // -----------------------------
+    const visibleVideos = new Set();
+    let io = null;
+    let watchdogTimer = null;
+
+    function safePlay(video) {
+      try {
+        const p = video.play();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
+      } catch (_) {}
+    }
+
+    function withCacheBuster(src) {
+      try {
+        const u = new URL(src, location.href);
+        u.searchParams.set('cb', String(Date.now()));
+        return u.toString();
+      } catch (e) {
+        // fallback: force reload "brut"
+        const join = src.includes('?') ? '&' : '?';
+        return src + join + 'cb=' + Date.now();
+      }
+    }
+
+    function reviveVideo(video, reason) {
+      if (!video) return;
+
+      // mémorise la source "propre" une seule fois
+      if (!video.dataset.baseSrc) video.dataset.baseSrc = video.currentSrc || video.src || '';
+
+      // si la vidéo est censée jouer et qu'elle est stoppée/figée
+      const shouldBePlaying = video.muted && video.autoplay;
+      if (!shouldBePlaying) return;
+
+      // 1) tentative simple: play()
+      if (video.paused || video.ended) {
+        safePlay(video);
+      }
+
+      // 2) si ça ne repart pas, on recharge la ressource (cache-buster) puis play
+      setTimeout(() => {
+        const stillStuck =
+          (video.paused || video.ended) ||
+          (video.readyState < 2); // pas assez de data pour jouer
+
+        if (!stillStuck) return;
+
+        const base = video.dataset.baseSrc || (video.currentSrc || video.src || '');
+        if (!base) return;
+
+        const nextSrc = withCacheBuster(base);
+
+        // reset propre
+        try { video.pause(); } catch (_) {}
+        try { video.removeAttribute('src'); } catch (_) {}
+        try { video.load(); } catch (_) {}
+
+        // re-set src
+        try { video.src = nextSrc; } catch (_) {}
+        try { video.load(); } catch (_) {}
+        safePlay(video);
+      }, 700);
+    }
+
+    function checkVisibleVideos() {
+      if (document.hidden) return;
+
+      visibleVideos.forEach(v => {
+        // si la vidéo est "en train" (currentTime n'avance plus), on relance
+        const now = Date.now();
+        const t = v.currentTime || 0;
+
+        const lastT = Number(v.dataset.lastTime || 0);
+        const lastAt = Number(v.dataset.lastAt || 0);
+
+        // met à jour si ça avance
+        if (!v.paused && !v.ended && t > lastT + 0.01) {
+          v.dataset.lastTime = String(t);
+          v.dataset.lastAt = String(now);
+          return;
+        }
+
+        // si elle est pausée / ended => revive direct
+        if (v.paused || v.ended) {
+          reviveVideo(v, 'paused/ended');
+          return;
+        }
+
+        // si elle "joue" mais n'avance plus depuis > 2.5s => revive
+        if (!v.paused && !v.ended) {
+          const stuckFor = lastAt ? (now - lastAt) : 0;
+          if (stuckFor > 2500) {
+            reviveVideo(v, 'stalled-time');
+          } else {
+            // initialise les marqueurs si jamais
+            if (!lastAt) {
+              v.dataset.lastTime = String(t);
+              v.dataset.lastAt = String(now);
+            }
+          }
+        }
+
+        // si readyState trop bas => revive
+        if (v.readyState < 2) {
+          reviveVideo(v, 'low-readyState');
+        }
+      });
+    }
+
+    function setupVideoObserver() {
+      if (io) return;
+
+      io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const v = entry.target;
+          if (!v) return;
+
+          if (entry.isIntersecting && entry.intersectionRatio > 0.55) {
+            visibleVideos.add(v);
+
+            // init tracking
+            v.dataset.lastTime = String(v.currentTime || 0);
+            v.dataset.lastAt = String(Date.now());
+
+            // tentative de lecture au moment où elle devient visible
+            safePlay(v);
+          } else {
+            visibleVideos.delete(v);
+          }
+        });
+
+        // check immédiat après update
+        checkVisibleVideos();
+      }, { threshold: [0, 0.55, 1] });
+    }
+
+    function attachVideoHealthHandlers(video) {
+      if (!video || video.dataset.healthBound) return;
+      video.dataset.healthBound = "1";
+
+      // Boucle de sécurité (certains iOS "oublient" loop)
+      video.addEventListener('ended', () => reviveVideo(video, 'ended'));
+      video.addEventListener('pause', () => {
+        // ne relance pas si la page est cachée
+        if (!document.hidden) reviveVideo(video, 'pause');
+      });
+
+      // événements "réseau"
+      video.addEventListener('stalled', () => { if (!document.hidden) reviveVideo(video, 'stalled'); });
+      video.addEventListener('waiting', () => { if (!document.hidden) reviveVideo(video, 'waiting'); });
+      video.addEventListener('error', () => { if (!document.hidden) reviveVideo(video, 'error'); });
+
+      // sur iOS, parfois ça repart mieux si on remet currentTime
+      video.addEventListener('loadeddata', () => {
+        // petit "kick"
+        safePlay(video);
+      });
+    }
+
+    function startWatchdog() {
+      if (watchdogTimer) return;
+      watchdogTimer = setInterval(checkVisibleVideos, 1200);
+    }
+
+    function stopWatchdog() {
+      if (!watchdogTimer) return;
+      clearInterval(watchdogTimer);
+      watchdogTimer = null;
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopWatchdog();
+      } else {
+        startWatchdog();
+        // check immédiat au retour
+        checkVisibleVideos();
+        // et un second check un peu après (iOS met parfois du temps)
+        setTimeout(checkVisibleVideos, 900);
+      }
+    });
+
+    // -----------------------------
+    // Ton code existant
+    // -----------------------------
     function openCalendar() {
       const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
       if (!w) {
@@ -177,10 +366,9 @@
       }
     }
 
-    // ---------------------------
-    // BIND UI
-    // ---------------------------
     function wireUpButtons() {
+      setupVideoObserver();
+
       document.querySelectorAll("video").forEach(v => {
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
@@ -191,13 +379,12 @@
           v.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
         }
 
-        // ✅ iOS: si Safari “pause” après retour réseau / switches, on retente play
-        if (!v.dataset.guardEvents) {
-          v.dataset.guardEvents = "1";
-          v.addEventListener("stalled", () => kickVisibleVideos(), { passive: true });
-          v.addEventListener("waiting", () => kickVisibleVideos(), { passive: true });
-          v.addEventListener("pause", () => kickVisibleVideos(), { passive: true });
-        }
+        // ✅ health handlers + observer
+        attachVideoHealthHandlers(v);
+        try { io.observe(v); } catch (_) {}
+
+        // ✅ s'assure que ça tente de jouer
+        safePlay(v);
       });
 
       document.querySelectorAll("img").forEach(img => {
@@ -217,15 +404,15 @@
         }
       });
 
-      // 🔥 important: (re)observe les nouvelles vidéos ajoutées
-      setupVisibilityObserver();
+      // ✅ lance le watchdog après binding
+      startWatchdog();
     }
 
     function createCard(post) {
       const media = post.video
         ? `
           <div class="video-wrapper">
-            <video src="${post.video}" autoplay muted loop playsinline preload="metadata"></video>
+            <video src="${post.video}" autoplay muted loop playsinline webkit-playsinline preload="auto" loading="lazy"></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>`
         : `
@@ -263,9 +450,6 @@
       recalcAll();
     }
 
-    // ---------------------------
-    // SCALE / SWIPE
-    // ---------------------------
     function recalcStepAndMax() {
       const track = document.getElementById('track');
       const firstCard = track.querySelector('.card');
@@ -308,8 +492,6 @@
       currentIndex = Math.max(0, Math.min(maxIndex, index));
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
-      // après un swipe, iOS peut “oublier” de relancer certaines vidéos → on kick
-      kickVisibleVideos();
     }
 
     function setupSwipe() {
@@ -343,170 +525,9 @@
       goTo(currentIndex);
     }
 
-    // =========================================================
-    // ✅ WATCHDOG : relance uniquement les vidéos visibles
-    // =========================================================
-    const visibleVideos = new Set();
-    const lastTimes = new WeakMap();     // video -> last currentTime
-    const stuckCounts = new WeakMap();   // video -> nb checks sans progression
-    let observer = null;
-    let watchdogTimer = null;
-
-    function setupVisibilityObserver() {
-      const root = document.getElementById('viewport');
-      if (!root) return;
-
-      if (!observer) {
-        observer = new IntersectionObserver((entries) => {
-          entries.forEach(entry => {
-            const v = entry.target;
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-              visibleVideos.add(v);
-              // dès qu’une vidéo devient visible : on tente play direct
-              safePlay(v);
-            } else {
-              visibleVideos.delete(v);
-            }
-          });
-        }, { root, threshold: [0, 0.6, 1] });
-      }
-
-      // observe toutes les vidéos non observées
-      document.querySelectorAll('video').forEach(v => {
-        if (!v.dataset.observed) {
-          v.dataset.observed = "1";
-          observer.observe(v);
-        }
-      });
-    }
-
-    function safePlay(v) {
-      if (!v) return;
-      try {
-        // iOS: si autoplay “bloque”, muted+playsinline aide, mais on retente
-        const p = v.play();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
-      } catch (_) {}
-    }
-
-    function addCacheBuster(src) {
-      try {
-        const u = new URL(src, window.location.href);
-        u.searchParams.set('t', Date.now().toString());
-        return u.toString();
-      } catch (e) {
-        // fallback
-        if (src.includes('?')) return src + '&t=' + Date.now();
-        return src + '?t=' + Date.now();
-      }
-    }
-
-    function hardReloadVideo(v) {
-      if (!v || !v.currentSrc) return;
-      const oldSrc = v.currentSrc || v.getAttribute('src') || '';
-      const newSrc = addCacheBuster(oldSrc);
-
-      // reset “propre”
-      try {
-        v.pause();
-      } catch (_) {}
-
-      v.setAttribute('src', newSrc);
-      try { v.load(); } catch (_) {}
-      safePlay(v);
-    }
-
-    function softRecoverVideo(v) {
-      // 1) si juste “pause” → play
-      safePlay(v);
-
-      // 2) si ça ne repart pas → load + play
-      try { v.load(); } catch (_) {}
-      safePlay(v);
-    }
-
-    function isProbablyStuck(v) {
-      // on veut éviter les faux positifs pendant un seek / load
-      if (!v) return false;
-
-      // si vidéo pas prête, ça peut être normal, mais si ça dure → on récupère
-      const ready = v.readyState; // 0..4
-      const paused = v.paused;
-      const ended = v.ended;
-
-      // progress check
-      const t = v.currentTime || 0;
-      const last = lastTimes.get(v);
-      const progressed = (typeof last === 'number') ? (t > last + 0.02) : true;
-
-      if (!progressed) {
-        const c = (stuckCounts.get(v) || 0) + 1;
-        stuckCounts.set(v, c);
-      } else {
-        stuckCounts.set(v, 0);
-      }
-      lastTimes.set(v, t);
-
-      const c = stuckCounts.get(v) || 0;
-
-      // règles:
-      // - si paused/ended alors qu’elle est visible → stuck
-      // - si pas de progression sur plusieurs checks (≈ 6s) → stuck
-      // - si readyState trop bas et ça persiste → stuck
-      if (ended) return true;
-      if (paused) return true;
-      if (c >= 3) return true;          // ~ 3 cycles
-      if (ready <= 1 && c >= 2) return true;
-
-      return false;
-    }
-
-    function kickVisibleVideos() {
-      // appelé lors d’events iOS + après swipe
-      visibleVideos.forEach(v => safePlay(v));
-    }
-
-    function startWatchdog() {
-      if (watchdogTimer) return;
-      watchdogTimer = setInterval(() => {
-        // si onglet pas visible, ne rien faire
-        if (document.hidden) return;
-
-        visibleVideos.forEach(v => {
-          if (!v) return;
-
-          // si “stuck” → récup
-          if (isProbablyStuck(v)) {
-            // d’abord soft recover
-            softRecoverVideo(v);
-
-            // si encore stuck au prochain tick → hard reload
-            const c = stuckCounts.get(v) || 0;
-            if (c >= 4) {
-              hardReloadVideo(v);
-              stuckCounts.set(v, 0);
-            }
-          }
-        });
-      }, 2000);
-    }
-
-    // iOS Safari: quand on revient au premier plan, certaines vidéos restent figées
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        // on retente play uniquement sur les visibles
-        kickVisibleVideos();
-      }
-    }, { passive: true });
-
-    // ---------------------------
-    // INIT
-    // ---------------------------
     window.addEventListener('load', () => {
       wireUpButtons();
       setupSwipe();
-      setupVisibilityObserver();
-      startWatchdog();
 
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -518,7 +539,6 @@
 
     window.addEventListener('resize', () => {
       recalcAll();
-      kickVisibleVideos();
     });
   </script>
 </body>
