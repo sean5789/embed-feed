@@ -291,10 +291,29 @@ async function generateStaticFeed() {
       stage.style.transform = 'scale(' + stageScale + ')';
     }
 
+    // ✅ PATCH: clamp en pixels pour empêcher d’aller “dans le blanc” à droite
     function goTo(index) {
       const track = document.getElementById('track');
+      const viewport = document.getElementById('viewport');
+      if (!track || !viewport) return;
+
+      // clamp index
       currentIndex = Math.max(0, Math.min(maxIndex, index));
-      const x = -(currentIndex * stepPx);
+
+      // position théorique (en pixels "base", pas visuels)
+      let x = -(currentIndex * stepPx);
+
+      // largeur totale (base) vs viewport (base)
+      const trackWidth = track.scrollWidth || 0;
+      const viewportWidth = (viewport.clientWidth || window.innerWidth || 0) / (stageScale || 1);
+
+      // limite max : on ne peut pas aller plus loin que (viewport - track)
+      const maxTranslate = Math.min(0, viewportWidth - trackWidth);
+
+      // clamp final
+      if (x < maxTranslate) x = maxTranslate;
+      if (x > 0) x = 0;
+
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
     }
 
@@ -365,7 +384,7 @@ async function generateStaticFeed() {
         });
       }, { threshold: [0, 0.15, 0.3, 0.6] });
 
-      // ✅ PATCH #1: observe initial avec le même flag dataset.observed
+      // ✅ PATCH: observe initial avec flag dataset.observed
       document.querySelectorAll('video').forEach(v => {
         if (!v.dataset.observed) {
           v.dataset.observed = "1";
@@ -377,7 +396,6 @@ async function generateStaticFeed() {
     function observeNewVideos() {
       if (!io) return;
       document.querySelectorAll('video').forEach(v => {
-        // éviter double observe
         if (!v.dataset.observed) {
           v.dataset.observed = "1";
           io.observe(v);
@@ -417,7 +435,6 @@ async function generateStaticFeed() {
         u.searchParams.set('v', String(now));
         newSrc = u.toString();
       } catch (_) {
-        // fallback si URL() échoue
         const joiner = src.includes('?') ? '&' : '?';
         newSrc = src + joiner + 'v=' + now;
       }
@@ -427,7 +444,6 @@ async function generateStaticFeed() {
       video.pause();
       video.setAttribute('src', newSrc);
 
-      // ✅ PATCH #2: sur iOS, plus stable de relancer play via canplay que setTimeout fixe
       video.muted = true;
       video.loop = wasLoop !== false;
       video.playsInline = true;
@@ -435,6 +451,7 @@ async function generateStaticFeed() {
       video.setAttribute("webkit-playsinline", "");
       video.setAttribute("disablepictureinpicture", "");
 
+      // ✅ PATCH: relancer play quand iOS dit "canplay"
       video.addEventListener("canplay", () => { tryPlay(video); }, { once: true });
       video.load();
     }
@@ -445,30 +462,24 @@ async function generateStaticFeed() {
 
       const videos = Array.from(document.querySelectorAll('video'));
       for (const v of videos) {
-        // visibilité : IntersectionObserver si dispo, sinon fallback bounding rect
         const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
         if (!vis) continue;
 
-        // si pas assez chargé, on attend
         if ((v.readyState || 0) < 2) continue;
 
-        // init state
         if (!STATE.has(v)) STATE.set(v, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
         const st = STATE.get(v);
 
         const nowTick = performance.now();
         const ct = Number.isFinite(v.currentTime) ? v.currentTime : 0;
 
-        // si la vidéo est en pause alors qu'elle devrait jouer → try play
         if (v.paused && !v.ended) {
           const ok = await tryPlay(v);
-          // si play refusé (rare car muted), on ne reload pas direct : ça peut être transitoire
           if (!ok) continue;
         }
 
-        // détection "bloquée" = currentTime n'avance pas
         if (st.lastTime >= 0) {
-          const advanced = (ct - st.lastTime) > 0.06; // ~ 1-2 frames
+          const advanced = (ct - st.lastTime) > 0.06;
           const elapsed = nowTick - st.lastTick;
 
           if (!advanced && elapsed > 3500) {
@@ -476,14 +487,12 @@ async function generateStaticFeed() {
             st.lastTick = nowTick;
             STATE.set(v, st);
 
-            // 1er signal : retenter play, 2e signal : reload
             if (st.stuckCount === 1) {
               await tryPlay(v);
             } else if (st.stuckCount >= 2) {
               reloadVideo(v);
             }
           } else if (advanced) {
-            // reset compteur si ça avance
             st.stuckCount = 0;
             st.lastTick = nowTick;
             st.lastTime = ct;
@@ -498,16 +507,13 @@ async function generateStaticFeed() {
     }
 
     function startWatchdog() {
-      // tick régulier (léger)
       setInterval(watchdogTick, 1200);
 
-      // si iOS déclenche des events de "stall", on marque et on retente play
       document.addEventListener('pause', (e) => {
         const v = e.target;
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
           if (vis && document.visibilityState === 'visible') {
-            // retente play, pas de reload immédiat
             tryPlay(v);
           }
         }
@@ -538,7 +544,6 @@ async function generateStaticFeed() {
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
           if (vis && document.visibilityState === 'visible') {
-            // erreur → reload direct, mais throttlé
             reloadVideo(v);
           }
         }
@@ -559,7 +564,6 @@ async function generateStaticFeed() {
           recalcAll();
           goTo(0);
 
-          // essayer de lancer proprement au chargement (sans reload iframe)
           document.querySelectorAll('video').forEach(v => { tryPlay(v); });
         });
       });
@@ -569,8 +573,6 @@ async function generateStaticFeed() {
       recalcAll();
     });
 
-    // quand tu ajoutes des cartes, il faut aussi observer les nouvelles vidéos
-    // et tenter play (sinon iOS parfois laisse en pause).
     const _oldShowMore = showMore;
     showMore = function () {
       _oldShowMore();
@@ -589,5 +591,6 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
 
