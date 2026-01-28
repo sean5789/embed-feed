@@ -33,7 +33,16 @@ async function generateStaticFeed() {
         <div class="video-wrapper">
           ${
             post.video
-              ? `<video src="${post.video}" autoplay muted loop playsinline preload="auto" webkit-playsinline></video>
+              ? `<video
+                   src="${post.video}"
+                   autoplay
+                   muted
+                   loop
+                   playsinline
+                   webkit-playsinline
+                   preload="auto"
+                   disablepictureinpicture
+                 ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
               : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
@@ -164,6 +173,7 @@ async function generateStaticFeed() {
         v.setAttribute("playsinline", "");
         v.setAttribute("webkit-playsinline", "");
         v.setAttribute("preload", "auto");
+        v.setAttribute("disablepictureinpicture", "");
 
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
@@ -197,7 +207,16 @@ async function generateStaticFeed() {
       const media = post.video
         ? \`
           <div class="video-wrapper">
-            <video src="\${post.video}" autoplay muted loop playsinline preload="auto" webkit-playsinline></video>
+            <video
+              src="\${post.video}"
+              autoplay
+              muted
+              loop
+              playsinline
+              webkit-playsinline
+              preload="auto"
+              disablepictureinpicture
+            ></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
           </div>\`
         : \`
@@ -346,7 +365,13 @@ async function generateStaticFeed() {
         });
       }, { threshold: [0, 0.15, 0.3, 0.6] });
 
-      document.querySelectorAll('video').forEach(v => io.observe(v));
+      // ✅ PATCH #1: observe initial avec le même flag dataset.observed
+      document.querySelectorAll('video').forEach(v => {
+        if (!v.dataset.observed) {
+          v.dataset.observed = "1";
+          io.observe(v);
+        }
+      });
     }
 
     function observeNewVideos() {
@@ -397,21 +422,21 @@ async function generateStaticFeed() {
         newSrc = src + joiner + 'v=' + now;
       }
 
-      const wasMuted = video.muted;
       const wasLoop = video.loop;
 
       video.pause();
       video.setAttribute('src', newSrc);
-      video.load();
 
+      // ✅ PATCH #2: sur iOS, plus stable de relancer play via canplay que setTimeout fixe
       video.muted = true;
-      video.loop = wasLoop !== false; // garde loop
+      video.loop = wasLoop !== false;
       video.playsInline = true;
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
+      video.setAttribute("disablepictureinpicture", "");
 
-      // tenter de repartir
-      setTimeout(() => { tryPlay(video); }, 150);
+      video.addEventListener("canplay", () => { tryPlay(video); }, { once: true });
+      video.load();
     }
 
     async function watchdogTick() {
@@ -564,4 +589,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
