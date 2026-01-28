@@ -167,7 +167,6 @@ async function generateStaticFeed() {
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
-        // iOS Safari: ces attributs doivent être présents
         v.muted = true;
         v.playsInline = true;
         v.setAttribute("playsinline", "");
@@ -246,8 +245,10 @@ async function generateStaticFeed() {
 
       currentIndexLoaded += BATCH_SIZE;
 
+      // ✅ IMPORTANT: quand il n’y a plus rien à charger, on SUPPRIME le bouton
+      // => il n’est plus compté dans maxIndex, donc impossible de "swipe" après la dernière vidéo
       if (currentIndexLoaded >= remainingPosts.length) {
-        btnCard.style.display = "none";
+        btnCard.remove();
       }
 
       wireUpButtons();
@@ -267,6 +268,7 @@ async function generateStaticFeed() {
         stepPx = 179;
       }
 
+      // ✅ IMPORTANT: le + est supprimé quand fini, donc maxIndex devient bien "dernière vidéo"
       const cards = track.querySelectorAll('.card');
       maxIndex = Math.max(0, cards.length - 1);
 
@@ -291,26 +293,21 @@ async function generateStaticFeed() {
       stage.style.transform = 'scale(' + stageScale + ')';
     }
 
-    // ✅ PATCH: clamp en pixels pour empêcher d’aller “dans le blanc” à droite
+    // Clamp pixels (anti "blanc" à droite)
     function goTo(index) {
       const track = document.getElementById('track');
       const viewport = document.getElementById('viewport');
       if (!track || !viewport) return;
 
-      // clamp index
       currentIndex = Math.max(0, Math.min(maxIndex, index));
 
-      // position théorique (en pixels "base", pas visuels)
       let x = -(currentIndex * stepPx);
 
-      // largeur totale (base) vs viewport (base)
       const trackWidth = track.scrollWidth || 0;
       const viewportWidth = (viewport.clientWidth || window.innerWidth || 0) / (stageScale || 1);
 
-      // limite max : on ne peut pas aller plus loin que (viewport - track)
       const maxTranslate = Math.min(0, viewportWidth - trackWidth);
 
-      // clamp final
       if (x < maxTranslate) x = maxTranslate;
       if (x > 0) x = 0;
 
@@ -337,8 +334,13 @@ async function generateStaticFeed() {
 
         if (Math.abs(dy) > Math.abs(dx)) return;
 
-        if (dx <= -40) goTo(currentIndex + 1);
-        else if (dx >= 40) goTo(currentIndex - 1);
+        // ✅ même comportement que le "+" :
+        // quand on est au bout, on n'avance plus
+        if (dx <= -40) {
+          if (currentIndex < maxIndex) goTo(currentIndex + 1);
+        } else if (dx >= 40) {
+          if (currentIndex > 0) goTo(currentIndex - 1);
+        }
       }, { passive: true });
     }
 
@@ -349,21 +351,19 @@ async function generateStaticFeed() {
     }
 
     // =========================================================
-    // ✅ WATCHDOG iPhone Safari : relance/recharge seulement
-    //    les vidéos VISIBLES qui se bloquent.
+    // WATCHDOG iPhone Safari
     // =========================================================
-    const VISIBLE = new WeakMap(); // video -> boolean
-    const STATE = new WeakMap();   // video -> { lastTime, lastTick, stuckCount, lastReload }
+    const VISIBLE = new WeakMap();
+    const STATE = new WeakMap();
 
     function isActuallyVisible(el) {
       const rect = el.getBoundingClientRect();
       const vw = window.innerWidth || document.documentElement.clientWidth;
       const vh = window.innerHeight || document.documentElement.clientHeight;
       if (rect.width <= 2 || rect.height <= 2) return false;
-      // visible si il y a un overlap minimum
       const overlapX = Math.max(0, Math.min(rect.right, vw) - Math.max(rect.left, 0));
       const overlapY = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
-      return overlapX * overlapY > 300; // seuil anti faux-positifs
+      return overlapX * overlapY > 300;
     }
 
     function markVisible(video, v) {
@@ -384,7 +384,7 @@ async function generateStaticFeed() {
         });
       }, { threshold: [0, 0.15, 0.3, 0.6] });
 
-      // ✅ PATCH: observe initial avec flag dataset.observed
+      // observe initial avec flag
       document.querySelectorAll('video').forEach(v => {
         if (!v.dataset.observed) {
           v.dataset.observed = "1";
@@ -416,7 +416,6 @@ async function generateStaticFeed() {
     function reloadVideo(video) {
       const st = STATE.get(video) || { lastReload: 0 };
       const now = Date.now();
-      // anti-boucle : pas plus d’un reload toutes les 6s par vidéo
       if (now - (st.lastReload || 0) < 6000) return;
 
       st.lastReload = now;
@@ -428,7 +427,6 @@ async function generateStaticFeed() {
       const src = video.currentSrc || video.getAttribute('src') || "";
       if (!src) return;
 
-      // cache-bust léger
       let newSrc = src;
       try {
         const u = new URL(src, window.location.href);
@@ -451,20 +449,17 @@ async function generateStaticFeed() {
       video.setAttribute("webkit-playsinline", "");
       video.setAttribute("disablepictureinpicture", "");
 
-      // ✅ PATCH: relancer play quand iOS dit "canplay"
       video.addEventListener("canplay", () => { tryPlay(video); }, { once: true });
       video.load();
     }
 
     async function watchdogTick() {
-      // IMPORTANT: on ne fait rien si page pas visible (sinon iOS bloque + faux positifs)
       if (document.visibilityState !== 'visible') return;
 
       const videos = Array.from(document.querySelectorAll('video'));
       for (const v of videos) {
         const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
         if (!vis) continue;
-
         if ((v.readyState || 0) < 2) continue;
 
         if (!STATE.has(v)) STATE.set(v, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
@@ -513,9 +508,7 @@ async function generateStaticFeed() {
         const v = e.target;
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
-          if (vis && document.visibilityState === 'visible') {
-            tryPlay(v);
-          }
+          if (vis && document.visibilityState === 'visible') tryPlay(v);
         }
       }, true);
 
@@ -523,9 +516,7 @@ async function generateStaticFeed() {
         const v = e.target;
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
-          if (vis && document.visibilityState === 'visible') {
-            tryPlay(v);
-          }
+          if (vis && document.visibilityState === 'visible') tryPlay(v);
         }
       }, true);
 
@@ -533,9 +524,7 @@ async function generateStaticFeed() {
         const v = e.target;
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
-          if (vis && document.visibilityState === 'visible') {
-            tryPlay(v);
-          }
+          if (vis && document.visibilityState === 'visible') tryPlay(v);
         }
       }, true);
 
@@ -543,9 +532,7 @@ async function generateStaticFeed() {
         const v = e.target;
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
-          if (vis && document.visibilityState === 'visible') {
-            reloadVideo(v);
-          }
+          if (vis && document.visibilityState === 'visible') reloadVideo(v);
         }
       }, true);
     }
@@ -563,7 +550,6 @@ async function generateStaticFeed() {
         requestAnimationFrame(() => {
           recalcAll();
           goTo(0);
-
           document.querySelectorAll('video').forEach(v => { tryPlay(v); });
         });
       });
@@ -591,6 +577,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
 
 
