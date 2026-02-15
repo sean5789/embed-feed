@@ -28,7 +28,8 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    // ✅ TikTok vertical + "→" supprimé + texte supprimé
+    // ✅ Flèche "→" supprimée + texte "2026 ! 🗓️" supprimé
+    // ✅ On garde .info (padding/hauteur) pour conserver l'élargissement/scroll identique
     const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
@@ -65,7 +66,7 @@ async function generateStaticFeed() {
       margin:0;
       padding:0;
       height:100%;
-      background:#000;
+      background:#fff;
       font-family:sans-serif;
       overflow:hidden;
       overscroll-behavior:none;
@@ -74,16 +75,11 @@ async function generateStaticFeed() {
     #viewport {
       position: relative;
       width: 100%;
-      height: 100vh;   /* fallback */
-      height: 100dvh;  /* ✅ vrai plein écran mobile */
+      height: 100vh;
       overflow: hidden;
       padding: 0px;
       box-sizing: border-box;
       touch-action: pan-y;
-      background:#000;
-      /* Optionnel safe-area (décommente si besoin)
-      padding-bottom: env(safe-area-inset-bottom);
-      */
     }
 
     #stage {
@@ -93,9 +89,8 @@ async function generateStaticFeed() {
 
     #track {
       display: flex;
-      flex-direction: column;
-      gap: 0px;
-      width: 100%;
+      gap: 14px;
+      width: max-content;
       will-change: transform;
       transform: translate3d(0,0,0);
       transition: transform 320ms cubic-bezier(.25,.8,.25,1);
@@ -103,43 +98,32 @@ async function generateStaticFeed() {
 
     .card {
       flex: 0 0 auto;
-      width: 100vw;
-      height: 100vh;   /* fallback */
-      height: 100dvh;  /* ✅ vrai plein écran mobile */
-      background:#000;
-      border-radius:0;
+      width: 165px;
+      background:#fff;
+      border-radius:16px;
       overflow:hidden;
-      position: relative;
       text-align:center;
     }
 
-    .video-wrapper { position:relative; width:100%; height:100%; }
-
-    video, img {
-      width:100%;
-      height:100%;
-      display:block;
-      object-fit:cover;
-    }
+    .video-wrapper { position:relative; width:100%; }
+    video, img { width:100%; height:100%; display:block; object-fit:cover; }
 
     .sound-btn {
-      position:absolute; bottom:18px; right:14px;
-      width:44px; height:44px;
+      position:absolute; bottom:10px; right:6px;
+      width:26px; height:26px;
       background:rgba(0,0,0,.6);
-      border:none; border-radius:999px; cursor:pointer;
+      border:none; border-radius:50%; cursor:pointer;
       background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
       background-repeat:no-repeat; background-position:center; background-size:60%;
     }
 
-    .info { padding:0; }
+    /* ✅ On garde le padding pour préserver exactement la même hauteur/élargissement/scroll */
+    .info { padding:6px 10px 2px; text-align:center; }
 
     .show-more-card {
       display:flex; align-items:center; justify-content:center;
-      font-size:48px; background:#111; height:100%; cursor:pointer;
-      color:#fff;
-      min-height: 100vh;   /* fallback */
-      min-height: 100dvh;  /* ✅ */
-      user-select:none;
+      font-size:28px; background:yellow; height:100%; cursor:pointer;
+      min-height: 100px;
     }
   </style>
 </head>
@@ -161,7 +145,7 @@ async function generateStaticFeed() {
     const remainingPosts = ${postsJSON};
 
     let currentIndex = 0;
-    let stepPx = 1;   // ✅ recalculé après rendu
+    let stepPx = 179;
     let maxIndex = 0;
 
     let currentIndexLoaded = 0;
@@ -194,10 +178,6 @@ async function generateStaticFeed() {
       });
 
       document.querySelectorAll("img").forEach(img => {
-        if (!img.dataset.bound) {
-          img.dataset.bound = "1";
-          img.addEventListener("click", openCalendar);
-        }
         if (!img.dataset.measured) {
           img.dataset.measured = "1";
           img.addEventListener("load", () => { recalcAll(); }, { once: true });
@@ -215,6 +195,8 @@ async function generateStaticFeed() {
       });
     }
 
+    // ✅ Flèche "→" supprimée + texte supprimé
+    // ✅ On garde <div class="info"></div> pour préserver la même hauteur/step/scroll
     function createCard(post) {
       const media = post.video
         ? \`
@@ -268,11 +250,11 @@ async function generateStaticFeed() {
 
       if (firstCard) {
         const rect = firstCard.getBoundingClientRect();
-        const visualH = rect.height || 1;
-        const baseH = visualH / (stageScale || 1);
-        stepPx = baseH; // gap = 0
+        const visualW = rect.width || 165;
+        const baseW = visualW / (stageScale || 1);
+        stepPx = baseW + 14;
       } else {
-        stepPx = 1;
+        stepPx = 179;
       }
 
       const cards = Array.from(track.querySelectorAll('.card')).filter(card => {
@@ -283,20 +265,33 @@ async function generateStaticFeed() {
       });
 
       maxIndex = Math.max(0, cards.length - 1);
+
       if (currentIndex > maxIndex) currentIndex = maxIndex;
     }
 
     function recalcScaleToFitHeight() {
-      stageScale = 1;
+      const viewport = document.getElementById('viewport');
       const stage = document.getElementById('stage');
-      if (stage) stage.style.transform = 'scale(1)';
+      if (!viewport || !stage) return;
+
+      const prev = stage.style.transform;
+      stage.style.transform = 'none';
+
+      const baseH = stage.scrollHeight || stage.getBoundingClientRect().height || 1;
+
+      stage.style.transform = prev;
+
+      const vh = viewport.clientHeight || window.innerHeight || baseH;
+
+      stageScale = vh / baseH;
+      stage.style.transform = 'scale(' + stageScale + ')';
     }
 
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
-      const y = -(currentIndex * stepPx);
-      track.style.transform = 'translate3d(0, ' + y + 'px, 0)';
+      const x = -(currentIndex * stepPx);
+      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
     }
 
     function setupSwipe() {
@@ -317,10 +312,10 @@ async function generateStaticFeed() {
         const dx = t.clientX - startX;
         const dy = t.clientY - startY;
 
-        if (Math.abs(dx) > Math.abs(dy)) return;
+        if (Math.abs(dy) > Math.abs(dx)) return;
 
-        if (dy <= -40) goTo(currentIndex + 1);
-        else if (dy >= 40) goTo(currentIndex - 1);
+        if (dx <= -40) goTo(currentIndex + 1);
+        else if (dx >= 40) goTo(currentIndex - 1);
       }, { passive: true });
     }
 
@@ -551,7 +546,6 @@ async function generateStaticFeed() {
     showMore = function () {
       _oldShowMore();
       observeNewVideos();
-      wireUpButtons();
       document.querySelectorAll('video').forEach(v => { tryPlay(v); });
     };
   </script>
@@ -566,7 +560,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
-
 
 
