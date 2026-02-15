@@ -28,8 +28,7 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    // ✅ TikTok vertical + "→" supprimé + "2026 ! 🗓️" supprimé
-    // ✅ On garde un <div class="info"></div> vide (padding 0 ici) au cas où tu veux réutiliser
+    // ✅ TikTok vertical + "→" supprimé + texte supprimé
     const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
@@ -75,12 +74,16 @@ async function generateStaticFeed() {
     #viewport {
       position: relative;
       width: 100%;
-      height: 100vh;
+      height: 100vh;   /* fallback */
+      height: 100dvh;  /* ✅ vrai plein écran mobile */
       overflow: hidden;
       padding: 0px;
       box-sizing: border-box;
-      touch-action: pan-y; /* ✅ swipe vertical */
+      touch-action: pan-y;
       background:#000;
+      /* Optionnel safe-area (décommente si besoin)
+      padding-bottom: env(safe-area-inset-bottom);
+      */
     }
 
     #stage {
@@ -88,22 +91,21 @@ async function generateStaticFeed() {
       will-change: transform;
     }
 
-    /* ✅ TikTok vertical */
     #track {
       display: flex;
       flex-direction: column;
-      gap: 0px; /* écran par écran */
+      gap: 0px;
       width: 100%;
       will-change: transform;
       transform: translate3d(0,0,0);
       transition: transform 320ms cubic-bezier(.25,.8,.25,1);
     }
 
-    /* ✅ Une carte = un écran */
     .card {
       flex: 0 0 auto;
       width: 100vw;
-      height: 100vh;
+      height: 100vh;   /* fallback */
+      height: 100dvh;  /* ✅ vrai plein écran mobile */
       background:#000;
       border-radius:0;
       overflow:hidden;
@@ -129,15 +131,14 @@ async function generateStaticFeed() {
       background-repeat:no-repeat; background-position:center; background-size:60%;
     }
 
-    /* ✅ Info gardé (vide) */
     .info { padding:0; }
 
-    /* ✅ Bouton "plus" devient une page entière */
     .show-more-card {
       display:flex; align-items:center; justify-content:center;
       font-size:48px; background:#111; height:100%; cursor:pointer;
       color:#fff;
-      min-height: 100vh;
+      min-height: 100vh;   /* fallback */
+      min-height: 100dvh;  /* ✅ */
       user-select:none;
     }
   </style>
@@ -160,7 +161,7 @@ async function generateStaticFeed() {
     const remainingPosts = ${postsJSON};
 
     let currentIndex = 0;
-    let stepPx = (window.innerHeight || 1); // ✅ hauteur d’un écran
+    let stepPx = 1;   // ✅ recalculé après rendu
     let maxIndex = 0;
 
     let currentIndexLoaded = 0;
@@ -175,7 +176,6 @@ async function generateStaticFeed() {
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
-        // iOS Safari: ces attributs doivent être présents
         v.muted = true;
         v.playsInline = true;
         v.setAttribute("playsinline", "");
@@ -185,7 +185,6 @@ async function generateStaticFeed() {
 
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
-          // ✅ tap sur la vidéo => ouvre calendrier
           v.addEventListener("click", openCalendar);
         }
         if (!v.dataset.measured) {
@@ -197,7 +196,6 @@ async function generateStaticFeed() {
       document.querySelectorAll("img").forEach(img => {
         if (!img.dataset.bound) {
           img.dataset.bound = "1";
-          // ✅ tap sur l'image => ouvre calendrier
           img.addEventListener("click", openCalendar);
         }
         if (!img.dataset.measured) {
@@ -217,7 +215,6 @@ async function generateStaticFeed() {
       });
     }
 
-    // ✅ Carte plein écran, sans texte/flèche
     function createCard(post) {
       const media = post.video
         ? \`
@@ -271,11 +268,11 @@ async function generateStaticFeed() {
 
       if (firstCard) {
         const rect = firstCard.getBoundingClientRect();
-        const visualH = rect.height || window.innerHeight || 1;
+        const visualH = rect.height || 1;
         const baseH = visualH / (stageScale || 1);
-        stepPx = baseH + 0; // gap = 0
+        stepPx = baseH; // gap = 0
       } else {
-        stepPx = (window.innerHeight || 1);
+        stepPx = 1;
       }
 
       const cards = Array.from(track.querySelectorAll('.card')).filter(card => {
@@ -290,7 +287,6 @@ async function generateStaticFeed() {
     }
 
     function recalcScaleToFitHeight() {
-      // Pour TikTok plein écran, on force un scale = 1 (stable)
       stageScale = 1;
       const stage = document.getElementById('stage');
       if (stage) stage.style.transform = 'scale(1)';
@@ -303,7 +299,6 @@ async function generateStaticFeed() {
       track.style.transform = 'translate3d(0, ' + y + 'px, 0)';
     }
 
-    // ✅ swipe vertical (haut/bas)
     function setupSwipe() {
       const viewport = document.getElementById('viewport');
       let startX = 0, startY = 0;
@@ -322,11 +317,10 @@ async function generateStaticFeed() {
         const dx = t.clientX - startX;
         const dy = t.clientY - startY;
 
-        // si geste surtout horizontal -> ignore
         if (Math.abs(dx) > Math.abs(dy)) return;
 
-        if (dy <= -40) goTo(currentIndex + 1);   // swipe up
-        else if (dy >= 40) goTo(currentIndex - 1); // swipe down
+        if (dy <= -40) goTo(currentIndex + 1);
+        else if (dy >= 40) goTo(currentIndex - 1);
       }, { passive: true });
     }
 
@@ -337,11 +331,10 @@ async function generateStaticFeed() {
     }
 
     // =========================================================
-    // ✅ WATCHDOG iPhone Safari : relance/recharge seulement
-    //    les vidéos VISIBLES qui se bloquent.
+    // WATCHDOG iPhone Safari
     // =========================================================
-    const VISIBLE = new WeakMap(); // video -> boolean
-    const STATE = new WeakMap();   // video -> { lastTime, lastTick, stuckCount, lastReload }
+    const VISIBLE = new WeakMap();
+    const STATE = new WeakMap();
 
     function isActuallyVisible(el) {
       const rect = el.getBoundingClientRect();
