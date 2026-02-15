@@ -48,6 +48,10 @@ async function generateStaticFeed() {
           }
         </div>
         <div class="info">
+          <div class="date"></div>
+          <div class="tag">
+            <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer"></a>
+          </div>
         </div>
       </div>
     `).join("\n");
@@ -117,6 +121,11 @@ async function generateStaticFeed() {
     }
 
     .info { padding:6px 10px 2px; text-align:center; }
+    .date { font-size:15px; color:#444; font-weight:bold; margin-top: 1px; }
+    .tag { margin-top:6px; display:inline-block; }
+    .tag a { text-decoration:none; display:inline-block;
+      background:#F5F4F4; font-weight:bold; padding:3px; border-radius:6px;
+    }
 
     .show-more-card {
       display:flex; align-items:center; justify-content:center;
@@ -158,6 +167,7 @@ async function generateStaticFeed() {
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
+        // iOS Safari: ces attributs doivent être présents
         v.muted = true;
         v.playsInline = true;
         v.setAttribute("playsinline", "");
@@ -168,6 +178,17 @@ async function generateStaticFeed() {
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
           v.addEventListener("click", openCalendar);
+        }
+        if (!v.dataset.measured) {
+          v.dataset.measured = "1";
+          v.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
+        }
+      });
+
+      document.querySelectorAll("img").forEach(img => {
+        if (!img.dataset.measured) {
+          img.dataset.measured = "1";
+          img.addEventListener("load", () => { recalcAll(); }, { once: true });
         }
       });
 
@@ -207,9 +228,367 @@ async function generateStaticFeed() {
         <div class="card">
           \${media}
           <div class="info">
+            <div class="date"></div>
+            <div class="tag">
+              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer"></a>
+            </div>
           </div>
         </div>\`;
     }
+
+    function showMore() {
+      const slice = remainingPosts.slice(currentIndexLoaded, currentIndexLoaded + BATCH_SIZE);
+      const btnCard = document.getElementById("show-more-btn");
+
+      slice.forEach(post => {
+        btnCard.insertAdjacentHTML("beforebegin", createCard(post));
+      });
+
+      currentIndexLoaded += BATCH_SIZE;
+
+      if (currentIndexLoaded >= remainingPosts.length) {
+        // plus rien à charger => on cache le "+"...
+        btnCard.style.display = "none";
+        // ...et on recalc immédiatement pour bloquer le swipe à droite
+        recalcAll();
+      }
+
+      wireUpButtons();
+      recalcAll();
+    }
+
+    function recalcStepAndMax() {
+      const track = document.getElementById('track');
+      const firstCard = track.querySelector('.card');
+
+      if (firstCard) {
+        const rect = firstCard.getBoundingClientRect();
+        const visualW = rect.width || 165;
+        const baseW = visualW / (stageScale || 1);
+        stepPx = baseW + 14;
+      } else {
+        stepPx = 179;
+      }
+
+      // ✅ Ajustement demandé :
+      // maxIndex doit se baser sur les cartes "réellement visibles".
+      // Si le "+" est display:none, on ne le compte plus.
+      const cards = Array.from(track.querySelectorAll('.card')).filter(card => {
+        if (card.id === 'show-more-btn') {
+          return card.style.display !== 'none';
+        }
+        return true;
+      });
+
+      maxIndex = Math.max(0, cards.length - 1);
+
+      if (currentIndex > maxIndex) currentIndex = maxIndex;
+    }
+
+    function recalcScaleToFitHeight() {
+      const viewport = document.getElementById('viewport');
+      const stage = document.getElementById('stage');
+      if (!viewport || !stage) return;
+
+      const prev = stage.style.transform;
+      stage.style.transform = 'none';
+
+      const baseH = stage.scrollHeight || stage.getBoundingClientRect().height || 1;
+
+      stage.style.transform = prev;
+
+      const vh = viewport.clientHeight || window.innerHeight || baseH;
+
+      stageScale = vh / baseH;
+      stage.style.transform = 'scale(' + stageScale + ')';
+    }
+
+    function goTo(index) {
+      const track = document.getElementById('track');
+      currentIndex = Math.max(0, Math.min(maxIndex, index));
+      const x = -(currentIndex * stepPx);
+      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+    }
+
+    function setupSwipe() {
+      const viewport = document.getElementById('viewport');
+      let startX = 0, startY = 0;
+
+      viewport.addEventListener('touchstart', (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        startX = t.clientX;
+        startY = t.clientY;
+      }, { passive: true });
+
+      viewport.addEventListener('touchend', (e) => {
+        const t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+
+        if (Math.abs(dy) > Math.abs(dx)) return;
+
+        if (dx <= -40) goTo(currentIndex + 1);
+        else if (dx >= 40) goTo(currentIndex - 1);
+      }, { passive: true });
+    }
+
+    function recalcAll() {
+      recalcScaleToFitHeight();
+      recalcStepAndMax();
+      goTo(currentIndex);
+    }
+
+    // =========================================================
+    // ✅ WATCHDOG iPhone Safari : relance/recharge seulement
+    //    les vidéos VISIBLES qui se bloquent.
+    // =========================================================
+    const VISIBLE = new WeakMap(); // video -> boolean
+    const STATE = new WeakMap();   // video -> { lastTime, lastTick, stuckCount, lastReload }
+
+    function isActuallyVisible(el) {
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth || document.documentElement.clientWidth;
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.width <= 2 || rect.height <= 2) return false;
+      // visible si il y a un overlap minimum
+      const overlapX = Math.max(0, Math.min(rect.right, vw) - Math.max(rect.left, 0));
+      const overlapY = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+      return overlapX * overlapY > 300; // seuil anti faux-positifs
+    }
+
+    function markVisible(video, v) {
+      VISIBLE.set(video, !!v);
+      if (!STATE.has(video)) {
+        STATE.set(video, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
+      }
+    }
+
+    let io = null;
+    function setupVisibilityObserver() {
+      if (!('IntersectionObserver' in window)) return;
+
+      io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const vid = entry.target;
+          markVisible(vid, entry.isIntersecting && entry.intersectionRatio > 0.15);
+        });
+      }, { threshold: [0, 0.15, 0.3, 0.6] });
+
+      // ✅ PATCH #1: observe initial avec le même flag dataset.observed
+      document.querySelectorAll('video').forEach(v => {
+        if (!v.dataset.observed) {
+          v.dataset.observed = "1";
+          io.observe(v);
+        }
+      });
+    }
+
+    function observeNewVideos() {
+      if (!io) return;
+      document.querySelectorAll('video').forEach(v => {
+        // éviter double observe
+        if (!v.dataset.observed) {
+          v.dataset.observed = "1";
+          io.observe(v);
+        }
+      });
+    }
+
+    async function tryPlay(video) {
+      try {
+        const p = video.play();
+        if (p && typeof p.then === "function") await p;
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function reloadVideo(video) {
+      const st = STATE.get(video) || { lastReload: 0 };
+      const now = Date.now();
+      // anti-boucle : pas plus d’un reload toutes les 6s par vidéo
+      if (now - (st.lastReload || 0) < 6000) return;
+
+      st.lastReload = now;
+      st.stuckCount = 0;
+      st.lastTick = performance.now();
+      st.lastTime = -1;
+      STATE.set(video, st);
+
+      const src = video.currentSrc || video.getAttribute('src') || "";
+      if (!src) return;
+
+      // cache-bust léger
+      let newSrc = src;
+      try {
+        const u = new URL(src, window.location.href);
+        u.searchParams.set('v', String(now));
+        newSrc = u.toString();
+      } catch (_) {
+        // fallback si URL() échoue
+        const joiner = src.includes('?') ? '&' : '?';
+        newSrc = src + joiner + 'v=' + now;
+      }
+
+      const wasLoop = video.loop;
+
+      video.pause();
+      video.setAttribute('src', newSrc);
+
+      // ✅ PATCH #2: sur iOS, plus stable de relancer play via canplay que setTimeout fixe
+      video.muted = true;
+      video.loop = wasLoop !== false;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.setAttribute("disablepictureinpicture", "");
+
+      video.addEventListener("canplay", () => { tryPlay(video); }, { once: true });
+      video.load();
+    }
+
+    async function watchdogTick() {
+      // IMPORTANT: on ne fait rien si page pas visible (sinon iOS bloque + faux positifs)
+      if (document.visibilityState !== 'visible') return;
+
+      const videos = Array.from(document.querySelectorAll('video'));
+      for (const v of videos) {
+        // visibilité : IntersectionObserver si dispo, sinon fallback bounding rect
+        const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+        if (!vis) continue;
+
+        // si pas assez chargé, on attend
+        if ((v.readyState || 0) < 2) continue;
+
+        // init state
+        if (!STATE.has(v)) STATE.set(v, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
+        const st = STATE.get(v);
+
+        const nowTick = performance.now();
+        const ct = Number.isFinite(v.currentTime) ? v.currentTime : 0;
+
+        // si la vidéo est en pause alors qu'elle devrait jouer → try play
+        if (v.paused && !v.ended) {
+          const ok = await tryPlay(v);
+          // si play refusé (rare car muted), on ne reload pas direct : ça peut être transitoire
+          if (!ok) continue;
+        }
+
+        // détection "bloquée" = currentTime n'avance pas
+        if (st.lastTime >= 0) {
+          const advanced = (ct - st.lastTime) > 0.06; // ~ 1-2 frames
+          const elapsed = nowTick - st.lastTick;
+
+          if (!advanced && elapsed > 3500) {
+            st.stuckCount += 1;
+            st.lastTick = nowTick;
+            STATE.set(v, st);
+
+            // 1er signal : retenter play, 2e signal : reload
+            if (st.stuckCount === 1) {
+              await tryPlay(v);
+            } else if (st.stuckCount >= 2) {
+              reloadVideo(v);
+            }
+          } else if (advanced) {
+            // reset compteur si ça avance
+            st.stuckCount = 0;
+            st.lastTick = nowTick;
+            st.lastTime = ct;
+            STATE.set(v, st);
+          }
+        } else {
+          st.lastTime = ct;
+          st.lastTick = nowTick;
+          STATE.set(v, st);
+        }
+      }
+    }
+
+    function startWatchdog() {
+      // tick régulier (léger)
+      setInterval(watchdogTick, 1200);
+
+      // si iOS déclenche des events de "stall", on marque et on retente play
+      document.addEventListener('pause', (e) => {
+        const v = e.target;
+        if (v && v.tagName === 'VIDEO') {
+          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+          if (vis && document.visibilityState === 'visible') {
+            // retente play, pas de reload immédiat
+            tryPlay(v);
+          }
+        }
+      }, true);
+
+      document.addEventListener('stalled', (e) => {
+        const v = e.target;
+        if (v && v.tagName === 'VIDEO') {
+          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+          if (vis && document.visibilityState === 'visible') {
+            tryPlay(v);
+          }
+        }
+      }, true);
+
+      document.addEventListener('waiting', (e) => {
+        const v = e.target;
+        if (v && v.tagName === 'VIDEO') {
+          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+          if (vis && document.visibilityState === 'visible') {
+            tryPlay(v);
+          }
+        }
+      }, true);
+
+      document.addEventListener('error', (e) => {
+        const v = e.target;
+        if (v && v.tagName === 'VIDEO') {
+          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+          if (vis && document.visibilityState === 'visible') {
+            // erreur → reload direct, mais throttlé
+            reloadVideo(v);
+          }
+        }
+      }, true);
+    }
+    // =========================================================
+
+    window.addEventListener('load', () => {
+      wireUpButtons();
+      setupSwipe();
+
+      setupVisibilityObserver();
+      observeNewVideos();
+      startWatchdog();
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          recalcAll();
+          goTo(0);
+
+          // essayer de lancer proprement au chargement (sans reload iframe)
+          document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+        });
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      recalcAll();
+    });
+
+    // quand tu ajoutes des cartes, il faut aussi observer les nouvelles vidéos
+    // et tenter play (sinon iOS parfois laisse en pause).
+    const _oldShowMore = showMore;
+    showMore = function () {
+      _oldShowMore();
+      observeNewVideos();
+      document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+    };
   </script>
 </body>
 </html>`;
@@ -222,6 +601,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
 
 
