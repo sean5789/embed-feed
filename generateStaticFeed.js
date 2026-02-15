@@ -28,6 +28,7 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
+    // ✅ Flèche "→" supprimée (bloc .tag retiré)
     const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
@@ -49,9 +50,6 @@ async function generateStaticFeed() {
         </div>
         <div class="info">
           <div class="date"> 2026 ! 🗓️ </div>
-          <div class="tag">
-            <a href="${CAL_URL}" target="_blank" rel="noopener noreferrer">→</a>
-          </div>
         </div>
       </div>
     `).join("\n");
@@ -122,10 +120,6 @@ async function generateStaticFeed() {
 
     .info { padding:6px 10px 2px; text-align:center; }
     .date { font-size:15px; color:#444; font-weight:bold; margin-top: 1px; }
-    .tag { margin-top:6px; display:inline-block; }
-    .tag a { text-decoration:none; display:inline-block;
-      background:#F5F4F4; font-weight:bold; padding:3px; border-radius:6px;
-    }
 
     .show-more-card {
       display:flex; align-items:center; justify-content:center;
@@ -203,6 +197,7 @@ async function generateStaticFeed() {
       });
     }
 
+    // ✅ Flèche "→" supprimée (bloc .tag retiré)
     function createCard(post) {
       const media = post.video
         ? \`
@@ -229,9 +224,6 @@ async function generateStaticFeed() {
           \${media}
           <div class="info">
             <div class="date"> 2026 ! 🗓️ </div>
-            <div class="tag">
-              <a href="\${CAL_URL}" target="_blank" rel="noopener noreferrer">→</a>
-            </div>
           </div>
         </div>\`;
     }
@@ -270,7 +262,6 @@ async function generateStaticFeed() {
         stepPx = 179;
       }
 
-      // ✅ Ajustement demandé :
       // maxIndex doit se baser sur les cartes "réellement visibles".
       // Si le "+" est display:none, on ne le compte plus.
       const cards = Array.from(track.querySelectorAll('.card')).filter(card => {
@@ -342,8 +333,8 @@ async function generateStaticFeed() {
     }
 
     // =========================================================
-    // ✅ WATCHDOG iPhone Safari : relance/recharge seulement
-    //    les vidéos VISIBLES qui se bloquent.
+    // WATCHDOG iPhone Safari : relance/recharge seulement
+    // les vidéos VISIBLES qui se bloquent.
     // =========================================================
     const VISIBLE = new WeakMap(); // video -> boolean
     const STATE = new WeakMap();   // video -> { lastTime, lastTick, stuckCount, lastReload }
@@ -353,10 +344,9 @@ async function generateStaticFeed() {
       const vw = window.innerWidth || document.documentElement.clientWidth;
       const vh = window.innerHeight || document.documentElement.clientHeight;
       if (rect.width <= 2 || rect.height <= 2) return false;
-      // visible si il y a un overlap minimum
       const overlapX = Math.max(0, Math.min(rect.right, vw) - Math.max(rect.left, 0));
       const overlapY = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
-      return overlapX * overlapY > 300; // seuil anti faux-positifs
+      return overlapX * overlapY > 300;
     }
 
     function markVisible(video, v) {
@@ -377,7 +367,6 @@ async function generateStaticFeed() {
         });
       }, { threshold: [0, 0.15, 0.3, 0.6] });
 
-      // ✅ PATCH #1: observe initial avec le même flag dataset.observed
       document.querySelectorAll('video').forEach(v => {
         if (!v.dataset.observed) {
           v.dataset.observed = "1";
@@ -389,7 +378,6 @@ async function generateStaticFeed() {
     function observeNewVideos() {
       if (!io) return;
       document.querySelectorAll('video').forEach(v => {
-        // éviter double observe
         if (!v.dataset.observed) {
           v.dataset.observed = "1";
           io.observe(v);
@@ -410,7 +398,6 @@ async function generateStaticFeed() {
     function reloadVideo(video) {
       const st = STATE.get(video) || { lastReload: 0 };
       const now = Date.now();
-      // anti-boucle : pas plus d’un reload toutes les 6s par vidéo
       if (now - (st.lastReload || 0) < 6000) return;
 
       st.lastReload = now;
@@ -422,14 +409,12 @@ async function generateStaticFeed() {
       const src = video.currentSrc || video.getAttribute('src') || "";
       if (!src) return;
 
-      // cache-bust léger
       let newSrc = src;
       try {
         const u = new URL(src, window.location.href);
         u.searchParams.set('v', String(now));
         newSrc = u.toString();
       } catch (_) {
-        // fallback si URL() échoue
         const joiner = src.includes('?') ? '&' : '?';
         newSrc = src + joiner + 'v=' + now;
       }
@@ -439,7 +424,6 @@ async function generateStaticFeed() {
       video.pause();
       video.setAttribute('src', newSrc);
 
-      // ✅ PATCH #2: sur iOS, plus stable de relancer play via canplay que setTimeout fixe
       video.muted = true;
       video.loop = wasLoop !== false;
       video.playsInline = true;
@@ -452,35 +436,28 @@ async function generateStaticFeed() {
     }
 
     async function watchdogTick() {
-      // IMPORTANT: on ne fait rien si page pas visible (sinon iOS bloque + faux positifs)
       if (document.visibilityState !== 'visible') return;
 
       const videos = Array.from(document.querySelectorAll('video'));
       for (const v of videos) {
-        // visibilité : IntersectionObserver si dispo, sinon fallback bounding rect
         const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
         if (!vis) continue;
 
-        // si pas assez chargé, on attend
         if ((v.readyState || 0) < 2) continue;
 
-        // init state
         if (!STATE.has(v)) STATE.set(v, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
         const st = STATE.get(v);
 
         const nowTick = performance.now();
         const ct = Number.isFinite(v.currentTime) ? v.currentTime : 0;
 
-        // si la vidéo est en pause alors qu'elle devrait jouer → try play
         if (v.paused && !v.ended) {
           const ok = await tryPlay(v);
-          // si play refusé (rare car muted), on ne reload pas direct : ça peut être transitoire
           if (!ok) continue;
         }
 
-        // détection "bloquée" = currentTime n'avance pas
         if (st.lastTime >= 0) {
-          const advanced = (ct - st.lastTime) > 0.06; // ~ 1-2 frames
+          const advanced = (ct - st.lastTime) > 0.06;
           const elapsed = nowTick - st.lastTick;
 
           if (!advanced && elapsed > 3500) {
@@ -488,14 +465,12 @@ async function generateStaticFeed() {
             st.lastTick = nowTick;
             STATE.set(v, st);
 
-            // 1er signal : retenter play, 2e signal : reload
             if (st.stuckCount === 1) {
               await tryPlay(v);
             } else if (st.stuckCount >= 2) {
               reloadVideo(v);
             }
           } else if (advanced) {
-            // reset compteur si ça avance
             st.stuckCount = 0;
             st.lastTick = nowTick;
             st.lastTime = ct;
@@ -510,16 +485,13 @@ async function generateStaticFeed() {
     }
 
     function startWatchdog() {
-      // tick régulier (léger)
       setInterval(watchdogTick, 1200);
 
-      // si iOS déclenche des events de "stall", on marque et on retente play
       document.addEventListener('pause', (e) => {
         const v = e.target;
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
           if (vis && document.visibilityState === 'visible') {
-            // retente play, pas de reload immédiat
             tryPlay(v);
           }
         }
@@ -550,7 +522,6 @@ async function generateStaticFeed() {
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
           if (vis && document.visibilityState === 'visible') {
-            // erreur → reload direct, mais throttlé
             reloadVideo(v);
           }
         }
@@ -571,7 +542,6 @@ async function generateStaticFeed() {
           recalcAll();
           goTo(0);
 
-          // essayer de lancer proprement au chargement (sans reload iframe)
           document.querySelectorAll('video').forEach(v => { tryPlay(v); });
         });
       });
@@ -581,8 +551,6 @@ async function generateStaticFeed() {
       recalcAll();
     });
 
-    // quand tu ajoutes des cartes, il faut aussi observer les nouvelles vidéos
-    // et tenter play (sinon iOS parfois laisse en pause).
     const _oldShowMore = showMore;
     showMore = function () {
       _oldShowMore();
