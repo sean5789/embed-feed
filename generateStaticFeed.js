@@ -113,14 +113,13 @@ async function generateStaticFeed() {
   -webkit-transform: translateZ(0); /* ✅ patch Safari iOS */
   clip-path: inset(0 round 16px);   /* ✅ le plus fiable iOS */
 }
-     video, img{
+    video, img{
   width: 100%;
   height: 100%;
   display: block;
   object-fit: cover;
   object-position: center bottom;
 }
-
 
     .sound-btn {
       position:absolute; bottom:10px; right:6px;
@@ -574,5 +573,4 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-
 
