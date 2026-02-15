@@ -28,8 +28,8 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    // ✅ Flèche "→" supprimée + texte "2026 ! 🗓️" supprimé
-    // ✅ On garde .info (padding/hauteur) pour conserver l'élargissement/scroll identique
+    // ✅ TikTok vertical + "→" supprimé + "2026 ! 🗓️" supprimé
+    // ✅ On garde un <div class="info"></div> vide (padding 0 ici) au cas où tu veux réutiliser
     const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
@@ -66,7 +66,7 @@ async function generateStaticFeed() {
       margin:0;
       padding:0;
       height:100%;
-      background:#fff;
+      background:#000;
       font-family:sans-serif;
       overflow:hidden;
       overscroll-behavior:none;
@@ -79,7 +79,8 @@ async function generateStaticFeed() {
       overflow: hidden;
       padding: 0px;
       box-sizing: border-box;
-      touch-action: pan-y;
+      touch-action: pan-y; /* ✅ swipe vertical */
+      background:#000;
     }
 
     #stage {
@@ -87,43 +88,57 @@ async function generateStaticFeed() {
       will-change: transform;
     }
 
+    /* ✅ TikTok vertical */
     #track {
       display: flex;
-      gap: 14px;
-      width: max-content;
+      flex-direction: column;
+      gap: 0px; /* écran par écran */
+      width: 100%;
       will-change: transform;
       transform: translate3d(0,0,0);
       transition: transform 320ms cubic-bezier(.25,.8,.25,1);
     }
 
+    /* ✅ Une carte = un écran */
     .card {
       flex: 0 0 auto;
-      width: 165px;
-      background:#fff;
-      border-radius:16px;
+      width: 100vw;
+      height: 100vh;
+      background:#000;
+      border-radius:0;
       overflow:hidden;
+      position: relative;
       text-align:center;
     }
 
-    .video-wrapper { position:relative; width:100%; }
-    video, img { width:100%; height:100%; display:block; object-fit:cover; }
+    .video-wrapper { position:relative; width:100%; height:100%; }
+
+    video, img {
+      width:100%;
+      height:100%;
+      display:block;
+      object-fit:cover;
+    }
 
     .sound-btn {
-      position:absolute; bottom:10px; right:6px;
-      width:26px; height:26px;
+      position:absolute; bottom:18px; right:14px;
+      width:44px; height:44px;
       background:rgba(0,0,0,.6);
-      border:none; border-radius:50%; cursor:pointer;
+      border:none; border-radius:999px; cursor:pointer;
       background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
       background-repeat:no-repeat; background-position:center; background-size:60%;
     }
 
-    /* ✅ On garde le padding pour préserver exactement la même hauteur/élargissement/scroll */
-    .info { padding:6px 10px 2px; text-align:center; }
+    /* ✅ Info gardé (vide) */
+    .info { padding:0; }
 
+    /* ✅ Bouton "plus" devient une page entière */
     .show-more-card {
       display:flex; align-items:center; justify-content:center;
-      font-size:28px; background:yellow; height:100%; cursor:pointer;
-      min-height: 100px;
+      font-size:48px; background:#111; height:100%; cursor:pointer;
+      color:#fff;
+      min-height: 100vh;
+      user-select:none;
     }
   </style>
 </head>
@@ -145,7 +160,7 @@ async function generateStaticFeed() {
     const remainingPosts = ${postsJSON};
 
     let currentIndex = 0;
-    let stepPx = 179;
+    let stepPx = (window.innerHeight || 1); // ✅ hauteur d’un écran
     let maxIndex = 0;
 
     let currentIndexLoaded = 0;
@@ -160,6 +175,7 @@ async function generateStaticFeed() {
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
+        // iOS Safari: ces attributs doivent être présents
         v.muted = true;
         v.playsInline = true;
         v.setAttribute("playsinline", "");
@@ -169,6 +185,7 @@ async function generateStaticFeed() {
 
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
+          // ✅ tap sur la vidéo => ouvre calendrier
           v.addEventListener("click", openCalendar);
         }
         if (!v.dataset.measured) {
@@ -178,6 +195,11 @@ async function generateStaticFeed() {
       });
 
       document.querySelectorAll("img").forEach(img => {
+        if (!img.dataset.bound) {
+          img.dataset.bound = "1";
+          // ✅ tap sur l'image => ouvre calendrier
+          img.addEventListener("click", openCalendar);
+        }
         if (!img.dataset.measured) {
           img.dataset.measured = "1";
           img.addEventListener("load", () => { recalcAll(); }, { once: true });
@@ -195,8 +217,7 @@ async function generateStaticFeed() {
       });
     }
 
-    // ✅ Flèche "→" supprimée + texte supprimé
-    // ✅ On garde <div class="info"></div> pour préserver la même hauteur/step/scroll
+    // ✅ Carte plein écran, sans texte/flèche
     function createCard(post) {
       const media = post.video
         ? \`
@@ -250,11 +271,11 @@ async function generateStaticFeed() {
 
       if (firstCard) {
         const rect = firstCard.getBoundingClientRect();
-        const visualW = rect.width || 165;
-        const baseW = visualW / (stageScale || 1);
-        stepPx = baseW + 14;
+        const visualH = rect.height || window.innerHeight || 1;
+        const baseH = visualH / (stageScale || 1);
+        stepPx = baseH + 0; // gap = 0
       } else {
-        stepPx = 179;
+        stepPx = (window.innerHeight || 1);
       }
 
       const cards = Array.from(track.querySelectorAll('.card')).filter(card => {
@@ -265,35 +286,24 @@ async function generateStaticFeed() {
       });
 
       maxIndex = Math.max(0, cards.length - 1);
-
       if (currentIndex > maxIndex) currentIndex = maxIndex;
     }
 
     function recalcScaleToFitHeight() {
-      const viewport = document.getElementById('viewport');
+      // Pour TikTok plein écran, on force un scale = 1 (stable)
+      stageScale = 1;
       const stage = document.getElementById('stage');
-      if (!viewport || !stage) return;
-
-      const prev = stage.style.transform;
-      stage.style.transform = 'none';
-
-      const baseH = stage.scrollHeight || stage.getBoundingClientRect().height || 1;
-
-      stage.style.transform = prev;
-
-      const vh = viewport.clientHeight || window.innerHeight || baseH;
-
-      stageScale = vh / baseH;
-      stage.style.transform = 'scale(' + stageScale + ')';
+      if (stage) stage.style.transform = 'scale(1)';
     }
 
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
-      const x = -(currentIndex * stepPx);
-      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+      const y = -(currentIndex * stepPx);
+      track.style.transform = 'translate3d(0, ' + y + 'px, 0)';
     }
 
+    // ✅ swipe vertical (haut/bas)
     function setupSwipe() {
       const viewport = document.getElementById('viewport');
       let startX = 0, startY = 0;
@@ -312,10 +322,11 @@ async function generateStaticFeed() {
         const dx = t.clientX - startX;
         const dy = t.clientY - startY;
 
-        if (Math.abs(dy) > Math.abs(dx)) return;
+        // si geste surtout horizontal -> ignore
+        if (Math.abs(dx) > Math.abs(dy)) return;
 
-        if (dx <= -40) goTo(currentIndex + 1);
-        else if (dx >= 40) goTo(currentIndex - 1);
+        if (dy <= -40) goTo(currentIndex + 1);   // swipe up
+        else if (dy >= 40) goTo(currentIndex - 1); // swipe down
       }, { passive: true });
     }
 
@@ -326,10 +337,11 @@ async function generateStaticFeed() {
     }
 
     // =========================================================
-    // WATCHDOG iPhone Safari
+    // ✅ WATCHDOG iPhone Safari : relance/recharge seulement
+    //    les vidéos VISIBLES qui se bloquent.
     // =========================================================
-    const VISIBLE = new WeakMap();
-    const STATE = new WeakMap();
+    const VISIBLE = new WeakMap(); // video -> boolean
+    const STATE = new WeakMap();   // video -> { lastTime, lastTick, stuckCount, lastReload }
 
     function isActuallyVisible(el) {
       const rect = el.getBoundingClientRect();
@@ -546,6 +558,7 @@ async function generateStaticFeed() {
     showMore = function () {
       _oldShowMore();
       observeNewVideos();
+      wireUpButtons();
       document.querySelectorAll('video').forEach(v => { tryPlay(v); });
     };
   </script>
@@ -560,6 +573,7 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
 
 
