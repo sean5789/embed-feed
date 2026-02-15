@@ -49,7 +49,7 @@ async function generateStaticFeed() {
           }
         </div>
         <div class="info">
-          <div class="date"> 2026 ! 🗓️ </div>
+          <div class="date"> Soon 2026 ! </div>
         </div>
       </div>
     `).join("\n");
@@ -223,7 +223,7 @@ async function generateStaticFeed() {
         <div class="card">
           \${media}
           <div class="info">
-            <div class="date"> 2026 ! 🗓️ </div>
+            <div class="date"> Soon 2026 ! </div>
           </div>
         </div>\`;
     }
