@@ -28,7 +28,8 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    // ✅ Flèche "→" supprimée (bloc .tag retiré)
+    // ✅ Flèche "→" supprimée + texte "2026 ! 🗓️" supprimé
+    // ✅ On garde .info (padding/hauteur) pour conserver l'élargissement/scroll identique
     const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
@@ -48,9 +49,7 @@ async function generateStaticFeed() {
               : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
         </div>
-        <div class="info">
-          <div class="date"> ✈️🌎 </div>
-        </div>
+        <div class="info"></div>
       </div>
     `).join("\n");
 
@@ -118,8 +117,8 @@ async function generateStaticFeed() {
       background-repeat:no-repeat; background-position:center; background-size:60%;
     }
 
+    /* ✅ On garde le padding pour préserver exactement la même hauteur/élargissement/scroll */
     .info { padding:6px 10px 2px; text-align:center; }
-    .date { font-size:15px; color:#444; font-weight:bold; margin-top: 1px; }
 
     .show-more-card {
       display:flex; align-items:center; justify-content:center;
@@ -161,7 +160,6 @@ async function generateStaticFeed() {
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
-        // iOS Safari: ces attributs doivent être présents
         v.muted = true;
         v.playsInline = true;
         v.setAttribute("playsinline", "");
@@ -197,7 +195,8 @@ async function generateStaticFeed() {
       });
     }
 
-    // ✅ Flèche "→" supprimée (bloc .tag retiré)
+    // ✅ Flèche "→" supprimée + texte supprimé
+    // ✅ On garde <div class="info"></div> pour préserver la même hauteur/step/scroll
     function createCard(post) {
       const media = post.video
         ? \`
@@ -222,9 +221,7 @@ async function generateStaticFeed() {
       return \`
         <div class="card">
           \${media}
-          <div class="info">
-            <div class="date"> ✈️🌎 </div>
-          </div>
+          <div class="info"></div>
         </div>\`;
     }
 
@@ -239,9 +236,7 @@ async function generateStaticFeed() {
       currentIndexLoaded += BATCH_SIZE;
 
       if (currentIndexLoaded >= remainingPosts.length) {
-        // plus rien à charger => on cache le "+"...
         btnCard.style.display = "none";
-        // ...et on recalc immédiatement pour bloquer le swipe à droite
         recalcAll();
       }
 
@@ -262,8 +257,6 @@ async function generateStaticFeed() {
         stepPx = 179;
       }
 
-      // maxIndex doit se baser sur les cartes "réellement visibles".
-      // Si le "+" est display:none, on ne le compte plus.
       const cards = Array.from(track.querySelectorAll('.card')).filter(card => {
         if (card.id === 'show-more-btn') {
           return card.style.display !== 'none';
@@ -333,11 +326,10 @@ async function generateStaticFeed() {
     }
 
     // =========================================================
-    // WATCHDOG iPhone Safari : relance/recharge seulement
-    // les vidéos VISIBLES qui se bloquent.
+    // WATCHDOG iPhone Safari
     // =========================================================
-    const VISIBLE = new WeakMap(); // video -> boolean
-    const STATE = new WeakMap();   // video -> { lastTime, lastTick, stuckCount, lastReload }
+    const VISIBLE = new WeakMap();
+    const STATE = new WeakMap();
 
     function isActuallyVisible(el) {
       const rect = el.getBoundingClientRect();
@@ -541,7 +533,6 @@ async function generateStaticFeed() {
         requestAnimationFrame(() => {
           recalcAll();
           goTo(0);
-
           document.querySelectorAll('video').forEach(v => { tryPlay(v); });
         });
       });
@@ -569,5 +560,6 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
 
