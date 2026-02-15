@@ -28,7 +28,6 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    // ✅ Plus de flèche, plus de date
     const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
@@ -47,6 +46,8 @@ async function generateStaticFeed() {
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
               : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
+        </div>
+        <div class="info">
         </div>
       </div>
     `).join("\n");
@@ -75,6 +76,7 @@ async function generateStaticFeed() {
       width: 100%;
       height: 100vh;
       overflow: hidden;
+      padding: 0px;
       box-sizing: border-box;
       touch-action: pan-y;
     }
@@ -102,42 +104,23 @@ async function generateStaticFeed() {
       text-align:center;
     }
 
-    .video-wrapper { 
-      position:relative; 
-      width:100%; 
-    }
-
-    video, img { 
-      width:100%; 
-      height:100%; 
-      display:block; 
-      object-fit:cover; 
-    }
+    .video-wrapper { position:relative; width:100%; }
+    video, img { width:100%; height:100%; display:block; object-fit:cover; }
 
     .sound-btn {
-      position:absolute; 
-      bottom:10px; 
-      right:6px;
-      width:26px; 
-      height:26px;
+      position:absolute; bottom:10px; right:6px;
+      width:26px; height:26px;
       background:rgba(0,0,0,.6);
-      border:none; 
-      border-radius:50%; 
-      cursor:pointer;
+      border:none; border-radius:50%; cursor:pointer;
       background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat:no-repeat; 
-      background-position:center; 
-      background-size:60%;
+      background-repeat:no-repeat; background-position:center; background-size:60%;
     }
 
+    .info { padding:6px 10px 2px; text-align:center; }
+
     .show-more-card {
-      display:flex; 
-      align-items:center; 
-      justify-content:center;
-      font-size:28px; 
-      background:yellow; 
-      height:100%; 
-      cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+      font-size:28px; background:yellow; height:100%; cursor:pointer;
       min-height: 100px;
     }
   </style>
@@ -162,6 +145,7 @@ async function generateStaticFeed() {
     let currentIndex = 0;
     let stepPx = 179;
     let maxIndex = 0;
+
     let currentIndexLoaded = 0;
     let stageScale = 1;
 
@@ -220,30 +204,12 @@ async function generateStaticFeed() {
           </div>\`;
 
       return \`
-        <div class="card">\${media}</div>\`;
+        <div class="card">
+          \${media}
+          <div class="info">
+          </div>
+        </div>\`;
     }
-
-    function showMore() {
-      const slice = remainingPosts.slice(currentIndexLoaded, currentIndexLoaded + BATCH_SIZE);
-      const btnCard = document.getElementById("show-more-btn");
-
-      slice.forEach(post => {
-        btnCard.insertAdjacentHTML("beforebegin", createCard(post));
-      });
-
-      currentIndexLoaded += BATCH_SIZE;
-
-      if (currentIndexLoaded >= remainingPosts.length) {
-        btnCard.style.display = "none";
-      }
-
-      wireUpButtons();
-    }
-
-    window.addEventListener('load', () => {
-      wireUpButtons();
-    });
-
   </script>
 </body>
 </html>`;
@@ -256,5 +222,6 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+
 
 
