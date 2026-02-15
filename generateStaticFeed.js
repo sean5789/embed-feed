@@ -106,7 +106,14 @@ async function generateStaticFeed() {
     }
 
     .video-wrapper { position:relative; width:100%; }
-    video, img { width:100%; height:100%; display:block; object-fit:cover; }
+     video, img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center bottom; /* garde le bas visible */
+}
+
 
     .sound-btn {
       position:absolute; bottom:10px; right:6px;
