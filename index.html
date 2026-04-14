@@ -486,70 +486,95 @@
       wrapper.style.position = "relative";
       wrapper.appendChild(newVideo);
 
+      let swapped = false;
+
       const cleanupFailedReload = () => {
+        if (swapped) return;
         if (newVideo.parentNode) newVideo.parentNode.removeChild(newVideo);
         delete wrapper.dataset.reloading;
       };
 
-      newVideo.addEventListener("canplay", async () => {
+      const finalizeSwap = () => {
+        if (swapped) return;
+        swapped = true;
+
+        try {
+          if (io && video.dataset.observed) {
+            try { io.unobserve(video); } catch (_) {}
+          }
+
+          if (video.parentNode === wrapper) {
+            wrapper.removeChild(video);
+          }
+
+          newVideo.style.position = "";
+          newVideo.style.inset = "";
+          newVideo.style.opacity = "";
+          newVideo.style.transition = "";
+
+          delete wrapper.dataset.reloading;
+
+          if (!newVideo.dataset.bound) {
+            newVideo.dataset.bound = "1";
+            newVideo.addEventListener("click", openCalendar);
+          }
+
+          if (!newVideo.dataset.measured) {
+            newVideo.dataset.measured = "1";
+            newVideo.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
+          }
+
+          if (io && !newVideo.dataset.observed) {
+            newVideo.dataset.observed = "1";
+            io.observe(newVideo);
+          }
+
+          const vis = VISIBLE.has(video) ? VISIBLE.get(video) : isActuallyVisible(newVideo);
+          markVisible(newVideo, vis);
+
+          STATE.set(newVideo, {
+            lastTime: Number.isFinite(newVideo.currentTime) ? newVideo.currentTime : 0,
+            lastTick: performance.now(),
+            stuckCount: 0,
+            lastReload: now
+          });
+
+          recalcAll();
+        } catch (_) {
+          delete wrapper.dataset.reloading;
+        }
+      };
+
+      newVideo.addEventListener("loadeddata", async () => {
         try {
           await tryPlay(newVideo);
         } catch (_) {}
+      }, { once: true });
 
+      newVideo.addEventListener("playing", () => {
         requestAnimationFrame(() => {
           newVideo.style.opacity = "1";
+          requestAnimationFrame(() => {
+            finalizeSwap();
+          });
         });
-
-        setTimeout(() => {
-          try {
-            if (io && video.dataset.observed) {
-              try { io.unobserve(video); } catch (_) {}
-            }
-
-            if (video.parentNode === wrapper) {
-              wrapper.removeChild(video);
-            }
-
-            newVideo.style.position = "";
-            newVideo.style.inset = "";
-            newVideo.style.opacity = "";
-            newVideo.style.transition = "";
-
-            delete wrapper.dataset.reloading;
-
-            if (!newVideo.dataset.bound) {
-              newVideo.dataset.bound = "1";
-              newVideo.addEventListener("click", openCalendar);
-            }
-
-            if (!newVideo.dataset.measured) {
-              newVideo.dataset.measured = "1";
-              newVideo.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
-            }
-
-            if (io && !newVideo.dataset.observed) {
-              newVideo.dataset.observed = "1";
-              io.observe(newVideo);
-            }
-
-            const vis = VISIBLE.has(video) ? VISIBLE.get(video) : isActuallyVisible(newVideo);
-            markVisible(newVideo, vis);
-
-            STATE.set(newVideo, {
-              lastTime: Number.isFinite(newVideo.currentTime) ? newVideo.currentTime : 0,
-              lastTick: performance.now(),
-              stuckCount: 0,
-              lastReload: now
-            });
-
-            recalcAll();
-          } catch (_) {
-            delete wrapper.dataset.reloading;
-          }
-        }, 220);
       }, { once: true });
 
       newVideo.addEventListener("error", cleanupFailedReload, { once: true });
+
+      newVideo.addEventListener("canplay", async () => {
+        try {
+          await tryPlay(newVideo);
+          setTimeout(() => {
+            if (!swapped && !newVideo.paused && !newVideo.ended) {
+              newVideo.style.opacity = "1";
+              requestAnimationFrame(() => {
+                finalizeSwap();
+              });
+            }
+          }, 120);
+        } catch (_) {}
+      }, { once: true });
 
       newVideo.load();
     }
