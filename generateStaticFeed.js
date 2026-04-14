@@ -28,8 +28,6 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    // ✅ Flèche "→" supprimée + texte "2026 ! 🗓️" supprimé
-    // ✅ On garde .info (padding/hauteur) pour conserver l'élargissement/scroll identique
     const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
@@ -99,6 +97,9 @@ async function generateStaticFeed() {
     .card {
       flex: 0 0 auto;
       width: 165px;
+      height: 301px;
+      min-height: 301px;
+      max-height: 301px;
       background:#fff;
       border-radius:16px;
       overflow:hidden;
@@ -112,10 +113,10 @@ async function generateStaticFeed() {
       min-height: 293px;
       max-height: 293px;
       aspect-ratio: 9 / 16;
-      overflow: hidden;                 /* ✅ clippe la vidéo */
-      border-radius: 16px;              /* ✅ coins arrondis */
-      -webkit-transform: translateZ(0); /* ✅ patch Safari iOS */
-      clip-path: inset(0 round 16px);   /* ✅ le plus fiable iOS */
+      overflow: hidden;
+      border-radius: 16px;
+      -webkit-transform: translateZ(0);
+      clip-path: inset(0 round 16px);
     }
 
     video, img{
@@ -135,8 +136,19 @@ async function generateStaticFeed() {
       background-repeat:no-repeat; background-position:center; background-size:60%;
     }
 
-    /* ✅ On garde le padding pour préserver exactement la même hauteur/élargissement/scroll */
-    .info { padding:6px 10px 2px; text-align:center; }
+    .info {
+      height: 8px;
+      min-height: 8px;
+      max-height: 8px;
+      padding: 0;
+      text-align:center;
+    }
+
+    #show-more-btn {
+      height: auto;
+      min-height: 0;
+      max-height: none;
+    }
 
     .show-more-card {
       display:flex; align-items:center; justify-content:center;
@@ -217,8 +229,6 @@ async function generateStaticFeed() {
       });
     }
 
-    // ✅ Flèche "→" supprimée + texte supprimé
-    // ✅ On garde <div class="info"></div> pour préserver la même hauteur/step/scroll
     function createCard(post) {
       const media = post.video
         ? \`
@@ -350,9 +360,6 @@ async function generateStaticFeed() {
       goTo(currentIndex);
     }
 
-    // =========================================================
-    // WATCHDOG iPhone Safari
-    // =========================================================
     const VISIBLE = new WeakMap();
     const STATE = new WeakMap();
 
@@ -651,7 +658,6 @@ async function generateStaticFeed() {
         }
       }, true);
     }
-    // =========================================================
 
     window.addEventListener('load', () => {
       wireUpButtons();
