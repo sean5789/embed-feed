@@ -96,10 +96,9 @@ async function generateStaticFeed() {
 
     .card {
       flex: 0 0 auto;
-      width: 165px;
-      height: 301px;
-      min-height: 301px;
-      max-height: 301px;
+      width: 200px;
+      height: 356px;
+      min-height: 356px;
       background:#fff;
       border-radius:16px;
       overflow:hidden;
@@ -109,9 +108,8 @@ async function generateStaticFeed() {
     .video-wrapper{
       position: relative;
       width: 100%;
-      height: 293px;
-      min-height: 293px;
-      max-height: 293px;
+      height: 356px;
+      min-height: 356px;
       aspect-ratio: 9 / 16;
       overflow: hidden;
       border-radius: 16px;
