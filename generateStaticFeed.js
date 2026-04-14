@@ -108,6 +108,9 @@ async function generateStaticFeed() {
     .video-wrapper{
       position: relative;
       width: 100%;
+      height: 293px;
+      min-height: 293px;
+      max-height: 293px;
       aspect-ratio: 9 / 16;
       overflow: hidden;                 /* ✅ clippe la vidéo */
       border-radius: 16px;              /* ✅ coins arrondis */
@@ -301,9 +304,12 @@ async function generateStaticFeed() {
       stage.style.transform = prev;
 
       const vh = viewport.clientHeight || window.innerHeight || baseH;
+      const nextScale = vh / baseH;
 
-      stageScale = vh / baseH;
-      stage.style.transform = 'scale(' + stageScale + ')';
+      if (Math.abs(nextScale - stageScale) > 0.01) {
+        stageScale = nextScale;
+        stage.style.transform = 'scale(' + stageScale + ')';
+      }
     }
 
     function goTo(index) {
