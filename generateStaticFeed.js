@@ -61,98 +61,117 @@ async function generateStaticFeed() {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body {
-      margin:0;
-      padding:0;
-      height:100%;
-      background:#fff;
-      font-family:sans-serif;
-      overflow:hidden;
-      overscroll-behavior:none;
-    }
+  margin:0;
+  padding:0;
+  height:100%;
+  background:#fff;
+  font-family:sans-serif;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
 
-    #viewport {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      overflow: hidden;
-      padding: 0px;
-      box-sizing: border-box;
-      touch-action: pan-y;
-    }
+#viewport {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  padding: 0px;
+  box-sizing: border-box;
+  touch-action: pan-y;
+}
 
-    #stage {
-      transform-origin: top left;
-      will-change: transform;
-    }
+/* 🔥 scale initial pour éviter l'effet "ça s'agrandit après" */
+#stage {
+  transform-origin: top left;
+  will-change: transform;
+  transform: scale(0.85);
+}
 
-    #track {
-      display: flex;
-      gap: 14px;
-      width: max-content;
-      will-change: transform;
-      transform: translate3d(0,0,0);
-      transition: transform 320ms cubic-bezier(.25,.8,.25,1);
-    }
+#track {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  will-change: transform;
+  transform: translate3d(0,0,0);
+  transition: transform 320ms cubic-bezier(.25,.8,.25,1);
+}
 
-    .card {
-      flex: 0 0 auto;
-      width: 200px;
-      height: 356px;
-      min-height: 356px;
-      background:#fff;
-      border-radius:16px;
-      overflow:hidden;
-      text-align:center;
-    }
+/* 🔥 CARTE PLUS GRANDE */
+.card {
+  flex: 0 0 auto;
+  width: 200px;
+  height: 364px;
+  min-height: 364px;
+  max-height: 364px;
+  background:#fff;
+  border-radius:16px;
+  overflow:hidden;
+  text-align:center;
+}
 
-    .video-wrapper{
-      position: relative;
-      width: 100%;
-      height: 356px;
-      min-height: 356px;
-      aspect-ratio: 9 / 16;
-      overflow: hidden;
-      border-radius: 16px;
-      -webkit-transform: translateZ(0);
-      clip-path: inset(0 round 16px);
-    }
+/* 🔥 VIDÉO IMMÉDIATE À LA BONNE TAILLE */
+.video-wrapper{
+  position: relative;
+  width: 100%;
+  height: 356px; /* 200 * 16 / 9 */
+  min-height: 356px;
+  max-height: 356px;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border-radius: 16px;
+  -webkit-transform: translateZ(0);
+  clip-path: inset(0 round 16px);
+}
 
-    video, img{
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: cover;
-      object-position: center bottom;
-    }
+video, img{
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center bottom;
+}
 
-    .sound-btn {
-      position:absolute; bottom:10px; right:6px;
-      width:26px; height:26px;
-      background:rgba(0,0,0,.6);
-      border:none; border-radius:50%; cursor:pointer;
-      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat:no-repeat; background-position:center; background-size:60%;
-    }
+.sound-btn {
+  position:absolute;
+  bottom:10px;
+  right:6px;
+  width:26px;
+  height:26px;
+  background:rgba(0,0,0,.6);
+  border:none;
+  border-radius:50%;
+  cursor:pointer;
+  background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:60%;
+}
 
-    .info {
-      height: 8px;
-      min-height: 8px;
-      max-height: 8px;
-      padding: 0;
-      text-align:center;
-    }
+/* petite zone info ultra compacte */
+.info {
+  height: 8px;
+  min-height: 8px;
+  max-height: 8px;
+  padding: 0;
+}
 
-    #show-more-btn {
-      height: auto;
-      min-height: 0;
-      max-height: none;
-    }
+/* bouton show more inchangé */
+#show-more-btn {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
 
-    .show-more-card {
-      display:flex; align-items:center; justify-content:center;
-      font-size:28px; background:yellow; height:100%; cursor:pointer;
-      min-height: 100px;
-    }
+.show-more-card {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  background:yellow;
+  height:100%;
+  cursor:pointer;
+  min-height: 100px;
+}
   </style>
 </head>
 <body>
