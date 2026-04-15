@@ -99,10 +99,10 @@ async function generateStaticFeed() {
 /* 🔥 CARTE PLUS GRANDE */
 .card {
   flex: 0 0 auto;
-  width: 220px;
-  height: 402px;
-  min-height: 402px;
-  max-height: 402px;
+  width: 200px;
+  height: 364px;
+  min-height: 364px;
+  max-height: 364px;
   background:#fff;
   border-radius:16px;
   overflow:hidden;
@@ -113,9 +113,9 @@ async function generateStaticFeed() {
 .video-wrapper{
   position: relative;
   width: 100%;
-  height: 391px; /* 200 * 16 / 9 */
-  min-height: 391px;
-  max-height: 391px;
+  height: 356px; /* 200 * 16 / 9 */
+  min-height: 356px;
+  max-height: 356px;
   aspect-ratio: 9 / 16;
   overflow: hidden;
   border-radius: 16px;
