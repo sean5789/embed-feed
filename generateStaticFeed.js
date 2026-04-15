@@ -98,7 +98,7 @@ async function generateStaticFeed() {
 
     .card {
       flex: 0 0 auto;
-      width: calc((100vh - 8px) * 9 / 16);
+      width: calc((100vh - 6px) * 9 / 16);
       height: 100vh;
       background: #fff;
       border-radius: 16px;
@@ -109,7 +109,7 @@ async function generateStaticFeed() {
     .video-wrapper {
       position: relative;
       width: 100%;
-      height: calc(100vh - 8px);
+      height: calc(100vh - 6px);
       overflow: hidden;
       border-radius: 16px;
       -webkit-transform: translateZ(0);
@@ -134,9 +134,9 @@ async function generateStaticFeed() {
     }
 
     .info {
-      height: 8px;
-      min-height: 8px;
-      max-height: 8px;
+      height: 6px;
+      min-height: 6px;
+      max-height: 6px;
       padding: 0;
       text-align: center;
     }
