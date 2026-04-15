@@ -1,114 +1,104 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Flux EmbedSocial</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: #fff;
-      font-family: sans-serif;
-      overflow: hidden;
-      overscroll-behavior: none;
-    }
+<meta charset="UTF-8" />
+<title>Flux EmbedSocial</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    #viewport {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      padding: 0;
-      box-sizing: border-box;
-      touch-action: pan-y;
-    }
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  font-family: sans-serif;
+  overflow: hidden;
+}
 
-    #stage {
-      transform-origin: top left;
-      will-change: transform;
-      transform: none;
-    }
+#viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
 
-    #track {
-      display: flex;
-      gap: 14px;
-      width: max-content;
-      will-change: transform;
-      transform: translate3d(0,0,0);
-      transition: transform 320ms cubic-bezier(.25,.8,.25,1);
-    }
+#stage {
+  transform-origin: top left;
+  will-change: transform;
+  transform: none;
+}
 
-    .card {
-      flex: 0 0 auto;
-      width: calc(100vh * 9 / 16);
-      height: 100vh;
-      background: #fff;
-      border-radius: 16px;
-      overflow: hidden;
-      text-align: center;
-    }
+#track {
+  display: flex;
+  gap: 14px;
+  width: max-content;
+  transform: translate3d(0,0,0);
+}
 
-    .video-wrapper {
-      position: relative;
-      width: 100%;
-      height: 100vh;
-      overflow: hidden;
-      border-radius: 16px;
-      -webkit-transform: translateZ(0);
-      clip-path: inset(0 round 16px);
-    }
+.card {
+  flex: 0 0 auto;
+  width: calc((100vh - 4px) * 9 / 16);
+  height: 100vh;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+}
 
-    video, img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: cover;
-      object-position: center bottom;
-    }
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 4px);
+  overflow: hidden;
+  border-radius: 16px;
+}
 
-    .sound-btn {
-      position:absolute; bottom:10px; right:6px;
-      width:26px; height:26px;
-      background:rgba(0,0,0,.6);
-      border:none; border-radius:50%; cursor:pointer;
-      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
-      background-repeat:no-repeat; background-position:center; background-size:60%;
-    }
+video, img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-    .info {
-      display: none;
-      height: 0;
-      min-height: 0;
-      max-height: 0;
-      padding: 0;
-      margin: 0;
-    }
+.sound-btn {
+  position:absolute;
+  bottom:10px;
+  right:6px;
+  width:26px;
+  height:26px;
+  border-radius:50%;
+  background:rgba(0,0,0,.6);
+}
 
-    #show-more-btn {
-      width: calc(100vh * 9 / 16);
-      height: 100vh;
-    }
+.info {
+  height: 4px;
+  min-height: 4px;
+  max-height: 4px;
+  padding: 0;
+  margin: 0;
+}
 
-    .show-more-card {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      background: yellow;
-      height: 100%;
-      cursor: pointer;
-      min-height: 100px;
-    }
-  </style>
+#show-more-btn {
+  width: calc((100vh - 4px) * 9 / 16);
+  height: 100vh;
+}
+
+.show-more-card {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  background:yellow;
+  height:100%;
+}
+</style>
 </head>
+
 <body>
-  <div id="viewport">
-    <div id="stage">
-      <div id="track">
-        
+
+<div id="viewport">
+  <div id="stage">
+    <div id="track">
+      
       <div class="card">
         <div class="video-wrapper">
           <video
@@ -198,102 +188,47 @@
         <div class="info"></div>
       </div>
     
-        <div class="card" id="show-more-btn">
-          <div class="show-more-card" onclick="showMore()">➕</div>
-        </div>
+      <div class="card" id="show-more-btn">
+        <div class="show-more-card" onclick="showMore()">➕</div>
       </div>
     </div>
   </div>
+</div>
 
-  <script>
-    const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
-    const BATCH_SIZE = 5;
-    const remainingPosts = [{"video":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18276/18276660490284988/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18276/18276660490284988/image_0.jpeg","source_webp":null,"type":"image","altText":null}}];
+<script>
+const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
+const BATCH_SIZE = 5;
+const remainingPosts = [{"video":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/17907/17907779979187833/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18076/18076544770932354/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18072/18072210499989992/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18066/18066965276282499/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/image_0.jpeg","source_webp":"https://embedsocial.com/admin/mediacache/feed-media/18058/18058193099582621/image_0.webp","type":"image","altText":null}},{"video":"https://embedsocial.com/admin/mediacache/feed-media/18276/18276660490284988/video.mp4","image":{"width":1080,"height":1080,"source":"https://embedsocial.com/admin/mediacache/feed-media/18276/18276660490284988/image_0.jpeg","source_webp":null,"type":"image","altText":null}}];
 
-    let currentIndex = 0;
-    let stepPx = 179;
-    let maxIndex = 0;
+let currentIndex = 0;
+let stepPx = 179;
 
-    let currentIndexLoaded = 0;
-    let stageScale = 1;
+function goTo(i){
+  currentIndex = i;
+  document.getElementById('track').style.transform =
+    'translate3d(' + (-i * stepPx) + 'px,0,0)';
+}
 
-    function openCalendar() {
-      const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
-      if (!w) {
-        try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_) {}
-      }
-    }
+function showMore(){
+  const btn = document.getElementById("show-more-btn");
+  remainingPosts.splice(0,BATCH_SIZE).forEach(p=>{
+    btn.insertAdjacentHTML("beforebegin", createCard(p));
+  });
+}
 
-    function wireUpButtons() {
-      document.querySelectorAll("video").forEach(v => {
-        v.muted = true;
-        v.playsInline = true;
-        v.setAttribute("playsinline", "");
-        v.setAttribute("webkit-playsinline", "");
-        v.setAttribute("preload", "auto");
-        v.setAttribute("disablepictureinpicture", "");
+function createCard(post){
+  return `
+    <div class="card">
+      <div class="video-wrapper">
+        ${post.video
+          ? '<video src="'+post.video+'" autoplay muted loop playsinline></video>'
+          : '<img src="'+post.image+'" />'}
+      </div>
+      <div class="info"></div>
+    </div>
+  `;
+}
+</script>
 
-        if (!v.dataset.bound) {
-          v.dataset.bound = "1";
-          v.addEventListener("click", openCalendar);
-        }
-      });
-
-      document.querySelectorAll(".sound-btn").forEach(btn => {
-        if (!btn.dataset.bound) {
-          btn.dataset.bound = "1";
-          btn.addEventListener("click", e => {
-            e.stopPropagation();
-            openCalendar();
-          });
-        }
-      });
-    }
-
-    function createCard(post) {
-      const media = post.video
-        ? `
-          <div class="video-wrapper">
-            <video src="${post.video}" autoplay muted loop playsinline></video>
-            <button class="sound-btn"></button>
-          </div>`
-        : `
-          <div class="video-wrapper">
-            <img src="${post.image}" />
-          </div>`;
-
-      return `
-        <div class="card">
-          ${media}
-          <div class="info"></div>
-        </div>`;
-    }
-
-    function showMore() {
-      const slice = remainingPosts.splice(0, BATCH_SIZE);
-      const btn = document.getElementById("show-more-btn");
-
-      slice.forEach(post => {
-        btn.insertAdjacentHTML("beforebegin", createCard(post));
-      });
-
-      if (remainingPosts.length === 0) {
-        btn.style.display = "none";
-      }
-
-      wireUpButtons();
-    }
-
-    function goTo(index) {
-      const track = document.getElementById('track');
-      currentIndex = index;
-      track.style.transform = 'translate3d(' + (-index * stepPx) + 'px, 0, 0)';
-    }
-
-    window.addEventListener('load', () => {
-      wireUpButtons();
-      goTo(0);
-    });
-  </script>
 </body>
 </html>
