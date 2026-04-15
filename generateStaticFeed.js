@@ -101,7 +101,7 @@ async function generateStaticFeed() {
       width: calc((100vh - 6px) * 9 / 16);
       height: 100vh;
       background: #fff;
-      border-radius: 24px;
+      border-radius: 30px;
       overflow: hidden;
       text-align: center;
     }
@@ -111,7 +111,7 @@ async function generateStaticFeed() {
       width: 100%;
       height: calc(100vh - 6px);
       overflow: hidden;
-      border-radius: 24px;
+      border-radius: 30px;
       -webkit-transform: translateZ(0);
       clip-path: inset(0 round 16px);
     }
