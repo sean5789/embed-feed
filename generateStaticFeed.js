@@ -12,6 +12,7 @@ async function generateStaticFeed() {
   try {
     if (!API_KEY) throw new Error('❌ EMBEDSOCIAL_API_KEY est manquant.');
 
+    console.log('📡 Connexion à l’API EmbedSocial...');
     const url = `https://embedsocial.com/admin/v2/api/social-feed/hashtag-album/media?album_ref=${ALBUM_REF}`;
 
     const res = await axios.get(url, {
@@ -20,6 +21,7 @@ async function generateStaticFeed() {
     });
 
     const posts = Array.isArray(res?.data?.data) ? res.data.data : [];
+    console.log(`✅ ${posts.length} posts récupérés`);
 
     const postsForClient = posts.map(p => ({
       video: p?.video?.source || null,
@@ -38,94 +40,649 @@ async function generateStaticFeed() {
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="metadata"
+                   preload="auto"
                    disablepictureinpicture
                  ></video>
-                 <button class="sound-btn"></button>`
-              : `<img src="${post.image}" loading="lazy" />`
+                 <button class="sound-btn" title="Ouvrir le calendrier"></button>`
+              : `<img src="${post.image}" alt="post" loading="lazy" />`
           }
         </div>
         <div class="info"></div>
       </div>
-    `).join("");
+    `).join("\n");
 
     const postsJSON = JSON.stringify(postsForClient.slice(BATCH_SIZE));
 
     const html = `<!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-html, body { margin:0; height:100%; overflow:hidden; }
+  <meta charset="UTF-8" />
+  <title>Flux EmbedSocial</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      font-family: sans-serif;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
 
-video {
-  transform: translateZ(0);
-  will-change: transform;
-}
+    #viewport {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: pan-y;
+    }
 
-#track {
-  display:flex;
-  gap:14px;
-  transition: transform .3s;
-}
+    #stage {
+      transform-origin: top left;
+      will-change: transform;
+      transform: none;
+    }
 
-.card {
-  width: calc((100vh) * 9 / 16);
-  height: 100vh;
-}
+    #track {
+      display: flex;
+      gap: 14px;
+      width: max-content;
+      will-change: transform;
+      transform: translate3d(0,0,0);
+      transition: transform 320ms cubic-bezier(.25,.8,.25,1);
+    }
 
-video, img {
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-</style>
+    .card {
+      flex: 0 0 auto;
+      width: calc((100vh - 6px) * 9 / 16);
+      height: 100vh;
+      background: #fff;
+      border-radius: 30px;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - 6px);
+      overflow: hidden;
+      border-radius: 30px;
+      -webkit-transform: translateZ(0);
+      clip-path: inset(0 round 16px);
+    }
+
+    video, img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center bottom;
+    }
+
+    .sound-btn {
+      position:absolute; bottom:10px; right:6px;
+      width:26px; height:26px;
+      background:rgba(0,0,0,.6);
+      border:none; border-radius:50%; cursor:pointer;
+      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 9v6h4l5 5V4L5 9H4zm14.5 12.1L3.9 4.5 2.5 5.9 18.1 21.5l.4.4 1.4-1.4-.4-.4z"/></svg>');
+      background-repeat:no-repeat; background-position:center; background-size:60%;
+    }
+
+    .info {
+      height: 6px;
+      min-height: 6px;
+      max-height: 6px;
+      padding: 0;
+      text-align: center;
+    }
+
+    #show-more-btn {
+      width: calc((100vh - 8px) * 9 / 16);
+      height: 100vh;
+    }
+
+    .show-more-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      background: yellow;
+      height: 100%;
+      cursor: pointer;
+      min-height: 100px;
+    }
+  </style>
 </head>
-
 <body>
+  <div id="viewport">
+    <div id="stage">
+      <div id="track">
+        ${firstBatch}
+        <div class="card" id="show-more-btn">
+          <div class="show-more-card" onclick="showMore()">➕</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<div id="track">
-${firstBatch}
-</div>
+  <script>
+    const CAL_URL = "${CAL_URL}";
+    const BATCH_SIZE = ${BATCH_SIZE};
+    const remainingPosts = ${postsJSON};
 
-<script>
+    let currentIndex = 0;
+    let stepPx = 179;
+    let maxIndex = 0;
 
-const remainingPosts = ${postsJSON};
+    let currentIndexLoaded = 0;
+    let stageScale = 1;
 
-function tryPlay(v){
-  v.play().catch(()=>{});
-}
+    function openCalendar() {
+      const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
+      if (!w) {
+        try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_) {}
+      }
+    }
 
-// 🔥 AUTOPLAY LIMITÉ
-requestAnimationFrame(() => {
-  const videos = document.querySelectorAll('video');
-  videos.forEach((v, i) => {
-    if (i <= 1) tryPlay(v);
-  });
-});
+    function wireUpButtons() {
+      document.querySelectorAll("video").forEach(v => {
+        v.muted = true;
+        v.playsInline = true;
+        v.setAttribute("playsinline", "");
+        v.setAttribute("webkit-playsinline", "");
+        v.setAttribute("preload", "auto");
+        v.setAttribute("disablepictureinpicture", "");
 
-// 🔥 WATCHDOG OPTIMISÉ
-function watchdogTick(){
-  document.querySelectorAll('video').forEach(v=>{
-    if(v.paused) tryPlay(v);
-  });
-}
+        if (!v.dataset.bound) {
+          v.dataset.bound = "1";
+          v.addEventListener("click", openCalendar);
+        }
+        if (!v.dataset.measured) {
+          v.dataset.measured = "1";
 
-setInterval(() => {
-  if (document.visibilityState !== 'visible') return;
-  watchdogTick();
-}, 1500);
+          const fastRecalc = () => { recalcAll(); };
 
-</script>
+          v.addEventListener("loadedmetadata", fastRecalc, { once: true });
+          v.addEventListener("loadeddata", fastRecalc, { once: true });
+        }
+      });
 
+      document.querySelectorAll("img").forEach(img => {
+        if (!img.dataset.measured) {
+          img.dataset.measured = "1";
+          img.addEventListener("load", () => { recalcAll(); }, { once: true });
+        }
+      });
+
+      document.querySelectorAll(".sound-btn").forEach(btn => {
+        if (!btn.dataset.bound) {
+          btn.dataset.bound = "1";
+          btn.addEventListener("click", e => {
+            e.stopPropagation();
+            openCalendar();
+          });
+        }
+      });
+    }
+
+    function createCard(post) {
+      const media = post.video
+        ? \`
+          <div class="video-wrapper">
+            <video
+              src="\${post.video}"
+              autoplay
+              muted
+              loop
+              playsinline
+              webkit-playsinline
+              preload="auto"
+              disablepictureinpicture
+            ></video>
+            <button class="sound-btn" title="Ouvrir le calendrier"></button>
+          </div>\`
+        : \`
+          <div class="video-wrapper">
+            <img src="\${post.image}" alt="post" loading="lazy" />
+          </div>\`;
+
+      return \`
+        <div class="card">
+          \${media}
+          <div class="info"></div>
+        </div>\`;
+    }
+
+    function showMore() {
+      const slice = remainingPosts.slice(currentIndexLoaded, currentIndexLoaded + BATCH_SIZE);
+      const btnCard = document.getElementById("show-more-btn");
+
+      slice.forEach(post => {
+        btnCard.insertAdjacentHTML("beforebegin", createCard(post));
+      });
+
+      currentIndexLoaded += BATCH_SIZE;
+
+      if (currentIndexLoaded >= remainingPosts.length) {
+        btnCard.style.display = "none";
+        recalcAll();
+      }
+
+      wireUpButtons();
+      recalcAll();
+    }
+
+    function recalcStepAndMax() {
+      const track = document.getElementById('track');
+      const firstCard = track.querySelector('.card');
+
+      if (firstCard) {
+        const rect = firstCard.getBoundingClientRect();
+        const visualW = rect.width || 165;
+        const baseW = visualW / (stageScale || 1);
+        stepPx = baseW + 14;
+      } else {
+        stepPx = 179;
+      }
+
+      const cards = Array.from(track.querySelectorAll('.card')).filter(card => {
+        if (card.id === 'show-more-btn') {
+          return card.style.display !== 'none';
+        }
+        return true;
+      });
+
+      maxIndex = Math.max(0, cards.length - 1);
+
+      if (currentIndex > maxIndex) currentIndex = maxIndex;
+    }
+
+    function recalcScaleToFitHeight() {
+      stageScale = 1;
+      const stage = document.getElementById('stage');
+      if (stage) stage.style.transform = 'none';
+    }
+
+    function goTo(index) {
+      const track = document.getElementById('track');
+      currentIndex = Math.max(0, Math.min(maxIndex, index));
+      const x = -(currentIndex * stepPx);
+      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+    }
+
+    function setupSwipe() {
+      const viewport = document.getElementById('viewport');
+      let startX = 0, startY = 0;
+
+      viewport.addEventListener('touchstart', (e) => {
+        const t = e.touches && e.touches[0];
+        if (!t) return;
+        startX = t.clientX;
+        startY = t.clientY;
+      }, { passive: true });
+
+      viewport.addEventListener('touchend', (e) => {
+        const t = e.changedTouches && e.changedTouches[0];
+        if (!t) return;
+
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+
+        if (Math.abs(dy) > Math.abs(dx)) return;
+
+        if (dx <= -40) goTo(currentIndex + 1);
+        else if (dx >= 40) goTo(currentIndex - 1);
+      }, { passive: true });
+    }
+
+    function recalcAll() {
+      recalcScaleToFitHeight();
+      recalcStepAndMax();
+      goTo(currentIndex);
+    }
+
+    // =========================================================
+    // WATCHDOG iPhone Safari
+    // =========================================================
+    const VISIBLE = new WeakMap();
+    const STATE = new WeakMap();
+
+    function isActuallyVisible(el) {
+      const rect = el.getBoundingClientRect();
+      const vw = window.innerWidth || document.documentElement.clientWidth;
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      if (rect.width <= 2 || rect.height <= 2) return false;
+      const overlapX = Math.max(0, Math.min(rect.right, vw) - Math.max(rect.left, 0));
+      const overlapY = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+      return overlapX * overlapY > 300;
+    }
+
+    function markVisible(video, v) {
+      VISIBLE.set(video, !!v);
+      if (!STATE.has(video)) {
+        STATE.set(video, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
+      }
+    }
+
+    let io = null;
+    function setupVisibilityObserver() {
+      if (!('IntersectionObserver' in window)) return;
+
+      io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          const vid = entry.target;
+          markVisible(vid, entry.isIntersecting && entry.intersectionRatio > 0.15);
+        });
+      }, { threshold: [0, 0.15, 0.3, 0.6] });
+
+      document.querySelectorAll('video').forEach(v => {
+        if (!v.dataset.observed) {
+          v.dataset.observed = "1";
+          io.observe(v);
+        }
+      });
+    }
+
+    function observeNewVideos() {
+      if (!io) return;
+      document.querySelectorAll('video').forEach(v => {
+        if (!v.dataset.observed) {
+          v.dataset.observed = "1";
+          io.observe(v);
+        }
+      });
+    }
+
+    async function tryPlay(video) {
+      try {
+        const p = video.play();
+        if (p && typeof p.then === "function") await p;
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function reloadVideo(video) {
+      const st = STATE.get(video) || { lastReload: 0 };
+      const now = Date.now();
+      if (now - (st.lastReload || 0) < 6000) return;
+
+      st.lastReload = now;
+      st.stuckCount = 0;
+      st.lastTick = performance.now();
+      st.lastTime = -1;
+      STATE.set(video, st);
+
+      const src = video.currentSrc || video.getAttribute('src') || "";
+      if (!src) return;
+
+      let newSrc = src;
+      try {
+        const u = new URL(src, window.location.href);
+        u.searchParams.set('v', String(now));
+        newSrc = u.toString();
+      } catch (_) {
+        const joiner = src.includes('?') ? '&' : '?';
+        newSrc = src + joiner + 'v=' + now;
+      }
+
+      const wrapper = video.closest('.video-wrapper');
+      if (!wrapper) return;
+
+      if (wrapper.dataset.reloading === "1") return;
+      wrapper.dataset.reloading = "1";
+
+      const newVideo = document.createElement('video');
+      newVideo.src = newSrc;
+      newVideo.autoplay = true;
+      newVideo.muted = true;
+      newVideo.loop = video.loop !== false;
+      newVideo.playsInline = true;
+      newVideo.setAttribute("playsinline", "");
+      newVideo.setAttribute("webkit-playsinline", "");
+      newVideo.setAttribute("preload", "auto");
+      newVideo.setAttribute("disablepictureinpicture", "");
+
+      newVideo.style.width = "100%";
+      newVideo.style.height = "100%";
+      newVideo.style.display = "block";
+      newVideo.style.objectFit = "cover";
+      newVideo.style.objectPosition = "center bottom";
+      newVideo.style.position = "absolute";
+      newVideo.style.inset = "0";
+      newVideo.style.opacity = "0";
+      newVideo.style.transition = "opacity 180ms ease";
+
+      wrapper.style.position = "relative";
+      wrapper.appendChild(newVideo);
+
+      let swapped = false;
+
+      const cleanupFailedReload = () => {
+        if (swapped) return;
+        if (newVideo.parentNode) newVideo.parentNode.removeChild(newVideo);
+        delete wrapper.dataset.reloading;
+      };
+
+      const finalizeSwap = () => {
+        if (swapped) return;
+        swapped = true;
+
+        try {
+          if (io && video.dataset.observed) {
+            try { io.unobserve(video); } catch (_) {}
+          }
+
+          if (video.parentNode === wrapper) {
+            wrapper.removeChild(video);
+          }
+
+          newVideo.style.position = "";
+          newVideo.style.inset = "";
+          newVideo.style.opacity = "";
+          newVideo.style.transition = "";
+
+          delete wrapper.dataset.reloading;
+
+          if (!newVideo.dataset.bound) {
+            newVideo.dataset.bound = "1";
+            newVideo.addEventListener("click", openCalendar);
+          }
+
+          if (!newVideo.dataset.measured) {
+            newVideo.dataset.measured = "1";
+            newVideo.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
+          }
+
+          if (io && !newVideo.dataset.observed) {
+            newVideo.dataset.observed = "1";
+            io.observe(newVideo);
+          }
+
+          const vis = VISIBLE.has(video) ? VISIBLE.get(video) : isActuallyVisible(newVideo);
+          markVisible(newVideo, vis);
+
+          STATE.set(newVideo, {
+            lastTime: Number.isFinite(newVideo.currentTime) ? newVideo.currentTime : 0,
+            lastTick: performance.now(),
+            stuckCount: 0,
+            lastReload: now
+          });
+
+          recalcAll();
+        } catch (_) {
+          delete wrapper.dataset.reloading;
+        }
+      };
+
+      newVideo.addEventListener("loadeddata", async () => {
+        try {
+          await tryPlay(newVideo);
+        } catch (_) {}
+      }, { once: true });
+
+      newVideo.addEventListener("playing", () => {
+        requestAnimationFrame(() => {
+          newVideo.style.opacity = "1";
+          requestAnimationFrame(() => {
+            finalizeSwap();
+          });
+        });
+      }, { once: true });
+
+      newVideo.addEventListener("error", cleanupFailedReload, { once: true });
+
+      newVideo.addEventListener("canplay", async () => {
+        try {
+          await tryPlay(newVideo);
+          setTimeout(() => {
+            if (!swapped && !newVideo.paused && !newVideo.ended) {
+              newVideo.style.opacity = "1";
+              requestAnimationFrame(() => {
+                finalizeSwap();
+              });
+            }
+          }, 120);
+        } catch (_) {}
+      }, { once: true });
+
+      newVideo.load();
+    }
+
+    async function watchdogTick() {
+      if (document.visibilityState !== 'visible') return;
+
+      const videos = Array.from(document.querySelectorAll('video'));
+      for (const v of videos) {
+        const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+        if (!vis) continue;
+
+        if ((v.readyState || 0) < 2) continue;
+
+        if (!STATE.has(v)) STATE.set(v, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
+        const st = STATE.get(v);
+
+        const nowTick = performance.now();
+        const ct = Number.isFinite(v.currentTime) ? v.currentTime : 0;
+
+        if (v.paused && !v.ended) {
+          const ok = await tryPlay(v);
+          if (!ok) continue;
+        }
+
+        if (st.lastTime >= 0) {
+          const advanced = (ct - st.lastTime) > 0.06;
+          const elapsed = nowTick - st.lastTick;
+
+          if (!advanced && elapsed > 3500) {
+            st.stuckCount += 1;
+            st.lastTick = nowTick;
+            STATE.set(v, st);
+
+            if (st.stuckCount === 1) {
+              await tryPlay(v);
+            } else if (st.stuckCount >= 2) {
+              reloadVideo(v);
+            }
+          } else if (advanced) {
+            st.stuckCount = 0;
+            st.lastTick = nowTick;
+            st.lastTime = ct;
+            STATE.set(v, st);
+          }
+        } else {
+          st.lastTime = ct;
+          st.lastTick = nowTick;
+          STATE.set(v, st);
+        }
+      }
+    }
+
+    function startWatchdog() {
+      setInterval(watchdogTick, 1200);
+
+      document.addEventListener('pause', (e) => {
+        const v = e.target;
+        if (v && v.tagName === 'VIDEO') {
+          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+          if (vis && document.visibilityState === 'visible') {
+            tryPlay(v);
+          }
+        }
+      }, true);
+
+      document.addEventListener('stalled', (e) => {
+        const v = e.target;
+        if (v && v.tagName === 'VIDEO') {
+          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+          if (vis && document.visibilityState === 'visible') {
+            tryPlay(v);
+          }
+        }
+      }, true);
+
+      document.addEventListener('waiting', (e) => {
+        const v = e.target;
+        if (v && v.tagName === 'VIDEO') {
+          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+          if (vis && document.visibilityState === 'visible') {
+            tryPlay(v);
+          }
+        }
+      }, true);
+
+      document.addEventListener('error', (e) => {
+        const v = e.target;
+        if (v && v.tagName === 'VIDEO') {
+          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+          if (vis && document.visibilityState === 'visible') {
+            reloadVideo(v);
+          }
+        }
+      }, true);
+    }
+    // =========================================================
+
+    window.addEventListener('load', () => {
+      wireUpButtons();
+      setupSwipe();
+
+      setupVisibilityObserver();
+      observeNewVideos();
+      startWatchdog();
+
+      recalcAll();
+      goTo(0);
+
+      requestAnimationFrame(() => {
+        document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+      });
+    });
+
+    window.addEventListener('resize', () => {
+      recalcAll();
+    });
+
+    const _oldShowMore = showMore;
+    showMore = function () {
+      _oldShowMore();
+      observeNewVideos();
+      document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+    };
+  </script>
 </body>
 </html>`;
 
     fs.writeFileSync(OUTPUT_FILE, html, 'utf8');
-    console.log('✅ index.html généré');
-
+    console.log(`✅ ${OUTPUT_FILE} généré avec succès.`);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Erreur :', err?.response?.data || err.message);
   }
 }
 
