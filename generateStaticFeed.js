@@ -649,7 +649,31 @@ async function generateStaticFeed() {
     }
     // =========================================================
 
-    window.addEventListener('load', () => {
+    
+function playFirstVideosFast() {
+  const videos = Array.from(document.querySelectorAll("video"));
+
+  videos.slice(0, 2).forEach(v => {
+    v.muted = true;
+    v.playsInline = true;
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
+    v.setAttribute("preload", "auto");
+
+    try {
+      const p = v.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch (_) {}
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", playFirstVideosFast, { once: true });
+} else {
+  playFirstVideosFast();
+}
+
+      window.addEventListener('load', () => {
       wireUpButtons();
       setupSwipe();
 
