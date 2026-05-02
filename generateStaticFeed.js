@@ -649,55 +649,69 @@ async function generateStaticFeed() {
     }
     // =========================================================
 
-    
-function playFirstVideosFast() {
-  const videos = Array.from(document.querySelectorAll("video"));
+    function startFirstTwoVideosImmediately() {
+  const firstTwo = Array.from(document.querySelectorAll("video")).slice(0, 2);
 
-  videos.slice(0, 2).forEach(v => {
+  firstTwo.forEach(v => {
     v.muted = true;
+    v.autoplay = true;
+    v.loop = true;
     v.playsInline = true;
     v.setAttribute("playsinline", "");
     v.setAttribute("webkit-playsinline", "");
     v.setAttribute("preload", "auto");
 
     try {
-      const p = v.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
+      v.load();
     } catch (_) {}
+
+    tryPlay(v);
   });
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", playFirstVideosFast, { once: true });
-} else {
-  playFirstVideosFast();
-}
+document.addEventListener("DOMContentLoaded", () => {
+  wireUpButtons();
+  recalcAll();
+  goTo(0);
 
-      window.addEventListener('load', () => {
-      wireUpButtons();
-      setupSwipe();
+  startFirstTwoVideosImmediately();
 
-      setupVisibilityObserver();
-      observeNewVideos();
-      startWatchdog();
+  requestAnimationFrame(() => {
+    startFirstTwoVideosImmediately();
+  });
 
-      recalcAll();
-      goTo(0);
+  setTimeout(() => {
+    startFirstTwoVideosImmediately();
+  }, 300);
+});
 
-      requestAnimationFrame(() => {
-        document.querySelectorAll('video').forEach(v => { tryPlay(v); });
-      });
-    });
+window.addEventListener('load', () => {
+  setupSwipe();
 
-    window.addEventListener('resize', () => {
-      recalcAll();
-    });
+  setupVisibilityObserver();
+  observeNewVideos();
+  startWatchdog();
 
-    const _oldShowMore = showMore;
-    showMore = function () {
-      _oldShowMore();
-      observeNewVideos();
-      document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+  recalcAll();
+  goTo(0);
+
+  startFirstTwoVideosImmediately();
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+  });
+});
+
+window.addEventListener('resize', () => {
+  recalcAll();
+});
+
+const _oldShowMore = showMore;
+showMore = function () {
+  _oldShowMore();
+  observeNewVideos();
+  document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+};
     };
   </script>
 </body>
