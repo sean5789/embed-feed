@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  
+  <link rel="preload" href="https://embedsocial.com/admin/cdncache/feed-media/18074/18074297701860940/video.mp4" as="video" fetchpriority="high">
+  
+
+  <link rel="preload" href="https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4" as="video" fetchpriority="high">
+  
+
   <style>
     html, body {
       margin: 0;
@@ -118,6 +126,7 @@
                    playsinline
                    webkit-playsinline
                    preload="auto"
+                   fetchpriority="high"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -136,6 +145,7 @@
                    playsinline
                    webkit-playsinline
                    preload="auto"
+                   fetchpriority="high"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -153,7 +163,8 @@
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   preload="metadata"
+                   fetchpriority="low"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -171,7 +182,8 @@
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   preload="metadata"
+                   fetchpriority="low"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -189,7 +201,8 @@
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   preload="metadata"
+                   fetchpriority="low"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -229,7 +242,6 @@
         v.playsInline = true;
         v.setAttribute("playsinline", "");
         v.setAttribute("webkit-playsinline", "");
-        v.setAttribute("preload", "auto");
         v.setAttribute("disablepictureinpicture", "");
 
         if (!v.dataset.bound) {
@@ -275,7 +287,8 @@
               loop
               playsinline
               webkit-playsinline
-              preload="auto"
+              preload="metadata"
+              fetchpriority="low"
               disablepictureinpicture
             ></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -342,11 +355,55 @@
       if (stage) stage.style.transform = 'none';
     }
 
+    function ultraStartVideos() {
+      const videos = Array.from(document.querySelectorAll('video')).slice(0, 2);
+
+      videos.forEach(v => {
+        v.muted = true;
+        v.playsInline = true;
+
+        v.preload = "auto";
+        v.setAttribute("preload", "auto");
+        v.setAttribute("fetchpriority", "high");
+
+        try {
+          v.load();
+        } catch (_) {}
+
+        tryPlay(v);
+        requestAnimationFrame(() => tryPlay(v));
+      });
+    }
+
+    function updateVideoPriority() {
+      const videos = Array.from(document.querySelectorAll('video'));
+
+      videos.forEach((v, i) => {
+        const shouldPlay = i === currentIndex || i === currentIndex + 1;
+
+        if (shouldPlay) {
+          v.preload = "auto";
+          v.setAttribute("preload", "auto");
+          v.setAttribute("fetchpriority", "high");
+
+          try { v.load(); } catch (_) {}
+          tryPlay(v);
+        } else {
+          v.preload = "metadata";
+          v.setAttribute("preload", "metadata");
+          v.setAttribute("fetchpriority", "low");
+
+          try { v.pause(); } catch (_) {}
+        }
+      });
+    }
+
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+      updateVideoPriority();
     }
 
     function setupSwipe() {
@@ -481,6 +538,7 @@
       newVideo.setAttribute("playsinline", "");
       newVideo.setAttribute("webkit-playsinline", "");
       newVideo.setAttribute("preload", "auto");
+      newVideo.setAttribute("fetchpriority", "high");
       newVideo.setAttribute("disablepictureinpicture", "");
 
       newVideo.style.width = "100%";
@@ -684,6 +742,8 @@
     // =========================================================
 
     window.addEventListener('load', () => {
+      ultraStartVideos();
+
       wireUpButtons();
       setupSwipe();
 
@@ -695,7 +755,7 @@
       goTo(0);
 
       requestAnimationFrame(() => {
-        document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+        updateVideoPriority();
       });
     });
 
@@ -707,7 +767,7 @@
     showMore = function () {
       _oldShowMore();
       observeNewVideos();
-      document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+      updateVideoPriority();
     };
   </script>
 </body>
