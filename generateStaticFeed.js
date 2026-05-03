@@ -329,32 +329,43 @@ async function generateStaticFeed() {
       video.playsInline = true;
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
+      video.setAttribute("preload", "auto");
 
       tryPlay(video);
     }
 
     function manageVideoPlayback() {
       const videos = Array.from(document.querySelectorAll("video"));
+      const cards = Array.from(document.querySelectorAll("#track .card"));
 
       videos.forEach((video) => {
         const card = video.closest(".card");
-        const cards = Array.from(document.querySelectorAll("#track .card"));
         const cardIndex = cards.indexOf(card);
 
-        const shouldBeActive =
-          cardIndex === currentIndex ||
-          cardIndex === currentIndex + 1;
+        const isCurrent = cardIndex === currentIndex;
+        const isNext = cardIndex === currentIndex + 1;
 
-        if (shouldBeActive) {
+        if (isCurrent) {
           activateVideo(video);
-        } else {
-          video.pause();
-
-          if (video.dataset.eager !== "1") {
-            video.removeAttribute("src");
+        } else if (isNext) {
+          if (!video.getAttribute("src") && video.dataset.src) {
+            video.src = video.dataset.src;
             video.load();
           }
-        }
+
+          video.pause();
+          video.muted = true;
+          video.playsInline = true;
+          video.setAttribute("playsinline", "");
+          video.setAttribute("webkit-playsinline", "");
+          video.setAttribute("preload", "auto");
+        } else {
+  video.pause();
+
+  if (!video.getAttribute("src")) {
+    video.setAttribute("preload", "none");
+  }
+}
       });
     }
 
