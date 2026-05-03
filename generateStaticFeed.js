@@ -28,7 +28,7 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    const firstBatch = postsForClient.slice(0, BATCH_SIZE).map((post, index) => `
+    const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
       <div class="card">
         <div class="video-wrapper">
           ${
@@ -40,8 +40,7 @@ async function generateStaticFeed() {
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="${index < 2 ? 'auto' : 'metadata'}"
-                   fetchpriority="${index < 2 ? 'high' : 'low'}"
+                   preload="auto"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
@@ -60,11 +59,6 @@ async function generateStaticFeed() {
   <meta charset="UTF-8" />
   <title>Flux EmbedSocial</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  ${postsForClient.slice(0, 2).filter(p => p.video).map(p => `
-  <link rel="preload" href="${p.video}" as="video" fetchpriority="high">
-  `).join("\n")}
-
   <style>
     html, body {
       margin: 0;
@@ -201,6 +195,7 @@ async function generateStaticFeed() {
         v.playsInline = true;
         v.setAttribute("playsinline", "");
         v.setAttribute("webkit-playsinline", "");
+        v.setAttribute("preload", "auto");
         v.setAttribute("disablepictureinpicture", "");
 
         if (!v.dataset.bound) {
@@ -246,8 +241,7 @@ async function generateStaticFeed() {
               loop
               playsinline
               webkit-playsinline
-              preload="metadata"
-              fetchpriority="low"
+              preload="auto"
               disablepictureinpicture
             ></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -314,55 +308,11 @@ async function generateStaticFeed() {
       if (stage) stage.style.transform = 'none';
     }
 
-    function ultraStartVideos() {
-      const videos = Array.from(document.querySelectorAll('video')).slice(0, 2);
-
-      videos.forEach(v => {
-        v.muted = true;
-        v.playsInline = true;
-
-        v.preload = "auto";
-        v.setAttribute("preload", "auto");
-        v.setAttribute("fetchpriority", "high");
-
-        try {
-          v.load();
-        } catch (_) {}
-
-        tryPlay(v);
-        requestAnimationFrame(() => tryPlay(v));
-      });
-    }
-
-    function updateVideoPriority() {
-      const videos = Array.from(document.querySelectorAll('video'));
-
-      videos.forEach((v, i) => {
-        const shouldPlay = i === currentIndex || i === currentIndex + 1;
-
-        if (shouldPlay) {
-          v.preload = "auto";
-          v.setAttribute("preload", "auto");
-          v.setAttribute("fetchpriority", "high");
-
-          try { v.load(); } catch (_) {}
-          tryPlay(v);
-        } else {
-          v.preload = "metadata";
-          v.setAttribute("preload", "metadata");
-          v.setAttribute("fetchpriority", "low");
-
-          try { v.pause(); } catch (_) {}
-        }
-      });
-    }
-
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
-      updateVideoPriority();
     }
 
     function setupSwipe() {
@@ -497,7 +447,6 @@ async function generateStaticFeed() {
       newVideo.setAttribute("playsinline", "");
       newVideo.setAttribute("webkit-playsinline", "");
       newVideo.setAttribute("preload", "auto");
-      newVideo.setAttribute("fetchpriority", "high");
       newVideo.setAttribute("disablepictureinpicture", "");
 
       newVideo.style.width = "100%";
@@ -701,8 +650,6 @@ async function generateStaticFeed() {
     // =========================================================
 
     window.addEventListener('load', () => {
-      ultraStartVideos();
-
       wireUpButtons();
       setupSwipe();
 
@@ -714,7 +661,7 @@ async function generateStaticFeed() {
       goTo(0);
 
       requestAnimationFrame(() => {
-        updateVideoPriority();
+        document.querySelectorAll('video').forEach(v => { tryPlay(v); });
       });
     });
 
@@ -726,7 +673,7 @@ async function generateStaticFeed() {
     showMore = function () {
       _oldShowMore();
       observeNewVideos();
-      updateVideoPriority();
+      document.querySelectorAll('video').forEach(v => { tryPlay(v); });
     };
   </script>
 </body>
