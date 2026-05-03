@@ -28,28 +28,31 @@ async function generateStaticFeed() {
       image: p.image || p.thumbnail || '',
     }));
 
-    const firstBatch = postsForClient.slice(0, BATCH_SIZE).map(post => `
+    const firstBatch = postsForClient.slice(0, BATCH_SIZE).map((post, index) => {
+      const eager = index < 2;
+
+      return `
       <div class="card">
         <div class="video-wrapper">
           ${
             post.video
               ? `<video
-                   src="${post.video}"
-                   autoplay
+                   ${eager ? `src="${post.video}" autoplay preload="auto" data-eager="1"` : `data-src="${post.video}" preload="none"`}
                    muted
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   poster="${post.image || ''}"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>`
-              : `<img src="${post.image}" alt="post" loading="lazy" />`
+              : `<img src="${post.image}" alt="post" loading="${eager ? 'eager' : 'lazy'}" />`
           }
         </div>
         <div class="info"></div>
       </div>
-    `).join("\n");
+    `;
+    }).join("\n");
 
     const postsJSON = JSON.stringify(postsForClient.slice(BATCH_SIZE));
 
@@ -195,7 +198,13 @@ async function generateStaticFeed() {
         v.playsInline = true;
         v.setAttribute("playsinline", "");
         v.setAttribute("webkit-playsinline", "");
-        v.setAttribute("preload", "auto");
+
+        if (v.dataset.eager === "1") {
+          v.setAttribute("preload", "auto");
+        } else {
+          v.setAttribute("preload", "none");
+        }
+
         v.setAttribute("disablepictureinpicture", "");
 
         if (!v.dataset.bound) {
@@ -235,13 +244,13 @@ async function generateStaticFeed() {
         ? \`
           <div class="video-wrapper">
             <video
-              src="\${post.video}"
-              autoplay
+              data-src="\${post.video}"
               muted
               loop
               playsinline
               webkit-playsinline
-              preload="auto"
+              preload="none"
+              poster="\${post.image || ''}"
               disablepictureinpicture
             ></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -308,11 +317,54 @@ async function generateStaticFeed() {
       if (stage) stage.style.transform = 'none';
     }
 
+    function activateVideo(video) {
+      if (!video) return;
+
+      if (!video.getAttribute("src") && video.dataset.src) {
+        video.src = video.dataset.src;
+        video.load();
+      }
+
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+
+      tryPlay(video);
+    }
+
+    function manageVideoPlayback() {
+      const videos = Array.from(document.querySelectorAll("video"));
+
+      videos.forEach((video) => {
+        const card = video.closest(".card");
+        const cards = Array.from(document.querySelectorAll("#track .card"));
+        const cardIndex = cards.indexOf(card);
+
+        const shouldBeActive =
+          cardIndex === currentIndex ||
+          cardIndex === currentIndex + 1;
+
+        if (shouldBeActive) {
+          activateVideo(video);
+        } else {
+          video.pause();
+
+          if (video.dataset.eager !== "1") {
+            video.removeAttribute("src");
+            video.load();
+          }
+        }
+      });
+    }
+
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+
+      manageVideoPlayback();
     }
 
     function setupSwipe() {
@@ -346,9 +398,6 @@ async function generateStaticFeed() {
       goTo(currentIndex);
     }
 
-    // =========================================================
-    // WATCHDOG iPhone Safari
-    // =========================================================
     const VISIBLE = new WeakMap();
     const STATE = new WeakMap();
 
@@ -647,7 +696,6 @@ async function generateStaticFeed() {
         }
       }, true);
     }
-    // =========================================================
 
     window.addEventListener('load', () => {
       wireUpButtons();
@@ -661,7 +709,11 @@ async function generateStaticFeed() {
       goTo(0);
 
       requestAnimationFrame(() => {
-        document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+        document.querySelectorAll('video[data-eager="1"]').forEach(v => {
+          activateVideo(v);
+        });
+
+        manageVideoPlayback();
       });
     });
 
@@ -673,7 +725,7 @@ async function generateStaticFeed() {
     showMore = function () {
       _oldShowMore();
       observeNewVideos();
-      document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+      manageVideoPlayback();
     };
   </script>
 </body>

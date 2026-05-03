@@ -111,13 +111,12 @@
       <div class="card">
         <div class="video-wrapper">
           <video
-                   src="https://embedsocial.com/admin/cdncache/feed-media/18074/18074297701860940/video.mp4"
-                   autoplay
+                   src="https://embedsocial.com/admin/cdncache/feed-media/18074/18074297701860940/video.mp4" autoplay preload="auto" data-eager="1"
                    muted
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   poster="[object Object]"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -129,13 +128,12 @@
       <div class="card">
         <div class="video-wrapper">
           <video
-                   src="https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4"
-                   autoplay
+                   src="https://embedsocial.com/admin/mediacache/feed-media/17927/17927366448086139/video.mp4" autoplay preload="auto" data-eager="1"
                    muted
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   poster="[object Object]"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -147,13 +145,12 @@
       <div class="card">
         <div class="video-wrapper">
           <video
-                   src="https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/video.mp4"
-                   autoplay
+                   data-src="https://embedsocial.com/admin/mediacache/feed-media/17884/17884932837315561/video.mp4" preload="none"
                    muted
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   poster="[object Object]"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -165,13 +162,12 @@
       <div class="card">
         <div class="video-wrapper">
           <video
-                   src="https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/video.mp4"
-                   autoplay
+                   data-src="https://embedsocial.com/admin/mediacache/feed-media/18071/18071734282816612/video.mp4" preload="none"
                    muted
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   poster="[object Object]"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -183,13 +179,12 @@
       <div class="card">
         <div class="video-wrapper">
           <video
-                   src="https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/video.mp4"
-                   autoplay
+                   data-src="https://embedsocial.com/admin/mediacache/feed-media/18033/18033437192457106/video.mp4" preload="none"
                    muted
                    loop
                    playsinline
                    webkit-playsinline
-                   preload="auto"
+                   poster="[object Object]"
                    disablepictureinpicture
                  ></video>
                  <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -229,7 +224,13 @@
         v.playsInline = true;
         v.setAttribute("playsinline", "");
         v.setAttribute("webkit-playsinline", "");
-        v.setAttribute("preload", "auto");
+
+        if (v.dataset.eager === "1") {
+          v.setAttribute("preload", "auto");
+        } else {
+          v.setAttribute("preload", "none");
+        }
+
         v.setAttribute("disablepictureinpicture", "");
 
         if (!v.dataset.bound) {
@@ -269,13 +270,13 @@
         ? `
           <div class="video-wrapper">
             <video
-              src="${post.video}"
-              autoplay
+              data-src="${post.video}"
               muted
               loop
               playsinline
               webkit-playsinline
-              preload="auto"
+              preload="none"
+              poster="${post.image || ''}"
               disablepictureinpicture
             ></video>
             <button class="sound-btn" title="Ouvrir le calendrier"></button>
@@ -342,11 +343,54 @@
       if (stage) stage.style.transform = 'none';
     }
 
+    function activateVideo(video) {
+      if (!video) return;
+
+      if (!video.getAttribute("src") && video.dataset.src) {
+        video.src = video.dataset.src;
+        video.load();
+      }
+
+      video.muted = true;
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+
+      tryPlay(video);
+    }
+
+    function manageVideoPlayback() {
+      const videos = Array.from(document.querySelectorAll("video"));
+
+      videos.forEach((video) => {
+        const card = video.closest(".card");
+        const cards = Array.from(document.querySelectorAll("#track .card"));
+        const cardIndex = cards.indexOf(card);
+
+        const shouldBeActive =
+          cardIndex === currentIndex ||
+          cardIndex === currentIndex + 1;
+
+        if (shouldBeActive) {
+          activateVideo(video);
+        } else {
+          video.pause();
+
+          if (video.dataset.eager !== "1") {
+            video.removeAttribute("src");
+            video.load();
+          }
+        }
+      });
+    }
+
     function goTo(index) {
       const track = document.getElementById('track');
       currentIndex = Math.max(0, Math.min(maxIndex, index));
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+
+      manageVideoPlayback();
     }
 
     function setupSwipe() {
@@ -380,9 +424,6 @@
       goTo(currentIndex);
     }
 
-    // =========================================================
-    // WATCHDOG iPhone Safari
-    // =========================================================
     const VISIBLE = new WeakMap();
     const STATE = new WeakMap();
 
@@ -681,7 +722,6 @@
         }
       }, true);
     }
-    // =========================================================
 
     window.addEventListener('load', () => {
       wireUpButtons();
@@ -695,7 +735,11 @@
       goTo(0);
 
       requestAnimationFrame(() => {
-        document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+        document.querySelectorAll('video[data-eager="1"]').forEach(v => {
+          activateVideo(v);
+        });
+
+        manageVideoPlayback();
       });
     });
 
@@ -707,7 +751,7 @@
     showMore = function () {
       _oldShowMore();
       observeNewVideos();
-      document.querySelectorAll('video').forEach(v => { tryPlay(v); });
+      manageVideoPlayback();
     };
   </script>
 </body>
