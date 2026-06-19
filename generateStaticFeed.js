@@ -186,11 +186,8 @@ async function generateStaticFeed() {
     let stageScale = 1;
 
     function openCalendar() {
-      const w = window.open(CAL_URL, "_blank", "noopener,noreferrer");
-      if (!w) {
-        try { parent.postMessage({ type:"openExternal", url: CAL_URL }, "*"); } catch(_) {}
-      }
-    }
+  window.location.href = CAL_URL;
+}
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
