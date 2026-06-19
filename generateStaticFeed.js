@@ -186,13 +186,12 @@ async function generateStaticFeed() {
     let stageScale = 1;
 
     function openCalendar() {
-  const a = document.createElement("a");
-  a.href = CAL_URL;
-  a.target = "_blank";
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  try {
+    window.parent.postMessage({
+      type: "OPEN_CALENDAR",
+      url: CAL_URL
+    }, "*");
+  } catch(e) {}
 }
 
     function wireUpButtons() {
