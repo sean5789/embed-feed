@@ -186,7 +186,11 @@ async function generateStaticFeed() {
     let stageScale = 1;
 
     function openCalendar() {
-  document.body.innerHTML = "<h1>CLICK OK</h1>";
+  try {
+    window.open(CAL_URL, "_blank");
+  } catch(e) {
+    window.location.href = CAL_URL;
+  }
 }
 
     function wireUpButtons() {
