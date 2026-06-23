@@ -187,11 +187,10 @@ async function generateStaticFeed() {
 
     function openCalendar() {
   try {
-    window.parent.postMessage({
-      type: "OPEN_CALENDAR",
-      url: CAL_URL
-    }, "*");
-  } catch(e) {}
+    window.open(CAL_URL, "_blank");
+  } catch(e) {
+    window.location.href = CAL_URL;
+  }
 }
 
     function wireUpButtons() {
