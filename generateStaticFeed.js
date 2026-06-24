@@ -1,6 +1,3 @@
-Oui. Remplace ton script par celui-ci : j’ai mis `touch-action: pan-x` et supprimé le `window resize recalcAll()`.
-
-```js
 require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
@@ -697,5 +694,3 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
-```
-
