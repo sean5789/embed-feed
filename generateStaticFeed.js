@@ -1,3 +1,6 @@
+Oui. Remplace ton script par celui-ci : j’ai mis `touch-action: pan-x` et supprimé le `window resize recalcAll()`.
+
+```js
 require('dotenv').config();
 const fs = require('fs');
 const axios = require('axios');
@@ -81,7 +84,7 @@ async function generateStaticFeed() {
       overflow: hidden;
       padding: 0;
       box-sizing: border-box;
-      touch-action: pan-y;
+      touch-action: pan-x;
     }
 
     #stage {
@@ -181,16 +184,15 @@ async function generateStaticFeed() {
     let currentIndex = 0;
     let stepPx = 179;
     let maxIndex = 0;
-
     let currentIndexLoaded = 0;
     let stageScale = 1;
 
     function openCalendar() {
-  window.parent.postMessage({
-    type: "OPEN_CALENDAR",
-    url: CAL_URL
-  }, "*");
-}
+      window.parent.postMessage({
+        type: "OPEN_CALENDAR",
+        url: CAL_URL
+      }, "*");
+    }
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
@@ -198,33 +200,25 @@ async function generateStaticFeed() {
         v.playsInline = true;
         v.setAttribute("playsinline", "");
         v.setAttribute("webkit-playsinline", "");
-
-        if (v.dataset.eager === "1") {
-          v.setAttribute("preload", "auto");
-        } else {
-          v.setAttribute("preload", "none");
-        }
-
+        v.setAttribute("preload", v.dataset.eager === "1" ? "auto" : "none");
         v.setAttribute("disablepictureinpicture", "");
 
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
           v.addEventListener("click", openCalendar);
         }
+
         if (!v.dataset.measured) {
           v.dataset.measured = "1";
-
-          const fastRecalc = () => { recalcAll(); };
-
-          v.addEventListener("loadedmetadata", fastRecalc, { once: true });
-          v.addEventListener("loadeddata", fastRecalc, { once: true });
+          v.addEventListener("loadedmetadata", recalcAll, { once: true });
+          v.addEventListener("loadeddata", recalcAll, { once: true });
         }
       });
 
       document.querySelectorAll("img").forEach(img => {
         if (!img.dataset.measured) {
           img.dataset.measured = "1";
-          img.addEventListener("load", () => { recalcAll(); }, { once: true });
+          img.addEventListener("load", recalcAll, { once: true });
         }
       });
 
@@ -283,7 +277,9 @@ async function generateStaticFeed() {
       }
 
       wireUpButtons();
+      observeNewVideos();
       recalcAll();
+      manageVideoPlayback();
     }
 
     function recalcStepAndMax() {
@@ -300,14 +296,11 @@ async function generateStaticFeed() {
       }
 
       const cards = Array.from(track.querySelectorAll('.card')).filter(card => {
-        if (card.id === 'show-more-btn') {
-          return card.style.display !== 'none';
-        }
+        if (card.id === 'show-more-btn') return card.style.display !== 'none';
         return true;
       });
 
       maxIndex = Math.max(0, cards.length - 1);
-
       if (currentIndex > maxIndex) currentIndex = maxIndex;
     }
 
@@ -360,12 +353,11 @@ async function generateStaticFeed() {
           video.setAttribute("webkit-playsinline", "");
           video.setAttribute("preload", "auto");
         } else {
-  video.pause();
-
-  if (!video.getAttribute("src")) {
-    video.setAttribute("preload", "none");
-  }
-}
+          video.pause();
+          if (!video.getAttribute("src")) {
+            video.setAttribute("preload", "none");
+          }
+        }
       });
     }
 
@@ -374,7 +366,6 @@ async function generateStaticFeed() {
       currentIndex = Math.max(0, Math.min(maxIndex, index));
       const x = -(currentIndex * stepPx);
       track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
-
       manageVideoPlayback();
     }
 
@@ -430,6 +421,7 @@ async function generateStaticFeed() {
     }
 
     let io = null;
+
     function setupVisibilityObserver() {
       if (!('IntersectionObserver' in window)) return;
 
@@ -493,9 +485,7 @@ async function generateStaticFeed() {
       }
 
       const wrapper = video.closest('.video-wrapper');
-      if (!wrapper) return;
-
-      if (wrapper.dataset.reloading === "1") return;
+      if (!wrapper || wrapper.dataset.reloading === "1") return;
       wrapper.dataset.reloading = "1";
 
       const newVideo = document.createElement('video');
@@ -539,9 +529,7 @@ async function generateStaticFeed() {
             try { io.unobserve(video); } catch (_) {}
           }
 
-          if (video.parentNode === wrapper) {
-            wrapper.removeChild(video);
-          }
+          if (video.parentNode === wrapper) wrapper.removeChild(video);
 
           newVideo.style.position = "";
           newVideo.style.inset = "";
@@ -557,7 +545,7 @@ async function generateStaticFeed() {
 
           if (!newVideo.dataset.measured) {
             newVideo.dataset.measured = "1";
-            newVideo.addEventListener("loadedmetadata", () => { recalcAll(); }, { once: true });
+            newVideo.addEventListener("loadedmetadata", recalcAll, { once: true });
           }
 
           if (io && !newVideo.dataset.observed) {
@@ -582,17 +570,13 @@ async function generateStaticFeed() {
       };
 
       newVideo.addEventListener("loadeddata", async () => {
-        try {
-          await tryPlay(newVideo);
-        } catch (_) {}
+        try { await tryPlay(newVideo); } catch (_) {}
       }, { once: true });
 
       newVideo.addEventListener("playing", () => {
         requestAnimationFrame(() => {
           newVideo.style.opacity = "1";
-          requestAnimationFrame(() => {
-            finalizeSwap();
-          });
+          requestAnimationFrame(finalizeSwap);
         });
       }, { once: true });
 
@@ -604,9 +588,7 @@ async function generateStaticFeed() {
           setTimeout(() => {
             if (!swapped && !newVideo.paused && !newVideo.ended) {
               newVideo.style.opacity = "1";
-              requestAnimationFrame(() => {
-                finalizeSwap();
-              });
+              requestAnimationFrame(finalizeSwap);
             }
           }, 120);
         } catch (_) {}
@@ -619,15 +601,17 @@ async function generateStaticFeed() {
       if (document.visibilityState !== 'visible') return;
 
       const videos = Array.from(document.querySelectorAll('video'));
+
       for (const v of videos) {
         const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
         if (!vis) continue;
-
         if ((v.readyState || 0) < 2) continue;
 
-        if (!STATE.has(v)) STATE.set(v, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
-        const st = STATE.get(v);
+        if (!STATE.has(v)) {
+          STATE.set(v, { lastTime: -1, lastTick: performance.now(), stuckCount: 0, lastReload: 0 });
+        }
 
+        const st = STATE.get(v);
         const nowTick = performance.now();
         const ct = Number.isFinite(v.currentTime) ? v.currentTime : 0;
 
@@ -645,11 +629,8 @@ async function generateStaticFeed() {
             st.lastTick = nowTick;
             STATE.set(v, st);
 
-            if (st.stuckCount === 1) {
-              await tryPlay(v);
-            } else if (st.stuckCount >= 2) {
-              reloadVideo(v);
-            }
+            if (st.stuckCount === 1) await tryPlay(v);
+            else if (st.stuckCount >= 2) reloadVideo(v);
           } else if (advanced) {
             st.stuckCount = 0;
             st.lastTick = nowTick;
@@ -667,43 +648,21 @@ async function generateStaticFeed() {
     function startWatchdog() {
       setInterval(watchdogTick, 1200);
 
-      document.addEventListener('pause', (e) => {
-        const v = e.target;
-        if (v && v.tagName === 'VIDEO') {
-          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
-          if (vis && document.visibilityState === 'visible') {
-            tryPlay(v);
+      ['pause', 'stalled', 'waiting'].forEach(evt => {
+        document.addEventListener(evt, (e) => {
+          const v = e.target;
+          if (v && v.tagName === 'VIDEO') {
+            const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
+            if (vis && document.visibilityState === 'visible') tryPlay(v);
           }
-        }
-      }, true);
-
-      document.addEventListener('stalled', (e) => {
-        const v = e.target;
-        if (v && v.tagName === 'VIDEO') {
-          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
-          if (vis && document.visibilityState === 'visible') {
-            tryPlay(v);
-          }
-        }
-      }, true);
-
-      document.addEventListener('waiting', (e) => {
-        const v = e.target;
-        if (v && v.tagName === 'VIDEO') {
-          const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
-          if (vis && document.visibilityState === 'visible') {
-            tryPlay(v);
-          }
-        }
-      }, true);
+        }, true);
+      });
 
       document.addEventListener('error', (e) => {
         const v = e.target;
         if (v && v.tagName === 'VIDEO') {
           const vis = VISIBLE.has(v) ? VISIBLE.get(v) : isActuallyVisible(v);
-          if (vis && document.visibilityState === 'visible') {
-            reloadVideo(v);
-          }
+          if (vis && document.visibilityState === 'visible') reloadVideo(v);
         }
       }, true);
     }
@@ -711,7 +670,6 @@ async function generateStaticFeed() {
     window.addEventListener('load', () => {
       wireUpButtons();
       setupSwipe();
-
       setupVisibilityObserver();
       observeNewVideos();
       startWatchdog();
@@ -727,17 +685,6 @@ async function generateStaticFeed() {
         manageVideoPlayback();
       });
     });
-
-    window.addEventListener('resize', () => {
-      recalcAll();
-    });
-
-    const _oldShowMore = showMore;
-    showMore = function () {
-      _oldShowMore();
-      observeNewVideos();
-      manageVideoPlayback();
-    };
   </script>
 </body>
 </html>`;
@@ -750,3 +697,5 @@ async function generateStaticFeed() {
 }
 
 generateStaticFeed();
+```
+
