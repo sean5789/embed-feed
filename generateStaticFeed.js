@@ -399,9 +399,16 @@ async function generateStaticFeed() {
 
     function goTo(index) {
       const track = document.getElementById('track');
+      const viewport = document.getElementById('viewport');
+
       currentIndex = Math.max(0, Math.min(maxIndex, index));
-      const x = -(currentIndex * stepPx);
-      track.style.transform = 'translate3d(' + x + 'px, 0, 0)';
+
+      let x = currentIndex * stepPx;
+
+      const maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth);
+      if (x > maxScroll) x = maxScroll;
+
+      track.style.transform = 'translate3d(' + (-x) + 'px, 0, 0)';
       manageVideoPlayback();
     }
 
