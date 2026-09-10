@@ -81,7 +81,7 @@ async function generateStaticFeed() {
       overflow: hidden;
       padding: 0;
       box-sizing: border-box;
-      touch-action: pan-y;
+      touch-action: none;
     }
 
     #stage {
