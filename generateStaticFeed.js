@@ -92,6 +92,7 @@ async function generateStaticFeed() {
     #track {
       display: flex;
       gap: 14px;
+      padding-left: 5px;
       width: max-content;
       will-change: transform;
       transform: translate3d(0,0,0);
