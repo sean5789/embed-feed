@@ -406,8 +406,17 @@ async function generateStaticFeed() {
 
       let x = currentIndex * stepPx;
 
-      const EDGE_GAP = 14;
-      const maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth + EDGE_GAP);
+      const GAP = 14;
+      const PAD_LEFT = 5;
+      const cardW = Math.max(1, stepPx - GAP);
+
+      let maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth + GAP);
+
+      // Si le bord gauche tombe dans l'espace entre deux cartes, on avance
+      // jusqu'au debut de la carte suivante pour eviter la bande blanche.
+      const rel = ((maxScroll - PAD_LEFT) % stepPx + stepPx) % stepPx;
+      if (rel > cardW) maxScroll += (stepPx - rel);
+
       if (x > maxScroll) x = maxScroll;
 
       track.style.transform = 'translate3d(' + (-x) + 'px, 0, 0)';
