@@ -81,7 +81,7 @@ async function generateStaticFeed() {
       overflow: hidden;
       padding: 0;
       box-sizing: border-box;
-      touch-action: pan-x;
+      touch-action: pan-y;
     }
 
     #stage {
@@ -681,6 +681,10 @@ async function generateStaticFeed() {
 
         manageVideoPlayback();
       });
+    });
+
+    window.addEventListener('resize', () => {
+      recalcAll();
     });
   </script>
 </body>
