@@ -406,18 +406,36 @@ async function generateStaticFeed() {
 
       let x = currentIndex * stepPx;
 
-      const GAP = 14;
-      const PAD_LEFT = 5;
-      const cardW = Math.max(1, stepPx - GAP);
+      const EDGE_GAP = 14;
 
-      let maxScroll = Math.max(0, track.scrollWidth - viewport.clientWidth + GAP);
+      // Mesures reelles des cartes (aucune constante supposee)
+      const cardsEls = Array.from(track.querySelectorAll('.card')).filter(c => {
+        if (c.id === 'show-more-btn') return c.style.display !== 'none';
+        return true;
+      });
 
-      // Si le bord gauche tombe dans l'espace entre deux cartes, on avance
-      // jusqu'au debut de la carte suivante pour eviter la bande blanche.
-      const rel = ((maxScroll - PAD_LEFT) % stepPx + stepPx) % stepPx;
-      if (rel > cardW) maxScroll += (stepPx - rel);
+      if (cardsEls.length) {
+        const first = cardsEls[0];
+        const last = cardsEls[cardsEls.length - 1];
 
-      if (x > maxScroll) x = maxScroll;
+        const firstLeft = first.offsetLeft;
+        const cw = first.offsetWidth;
+        const step = cardsEls.length > 1
+          ? (cardsEls[1].offsetLeft - firstLeft)
+          : cw;
+
+        const lastRight = last.offsetLeft + last.offsetWidth;
+        let maxScroll = Math.max(0, lastRight + EDGE_GAP - viewport.clientWidth);
+
+        // Si le bord gauche tombe dans l'espace entre deux cartes,
+        // on avance jusqu'au debut de la carte suivante.
+        if (step > 0) {
+          const rel = ((maxScroll - firstLeft) % step + step) % step;
+          if (rel > cw) maxScroll += (step - rel);
+        }
+
+        if (x > maxScroll) x = maxScroll;
+      }
 
       track.style.transform = 'translate3d(' + (-x) + 'px, 0, 0)';
       manageVideoPlayback();
