@@ -4,7 +4,6 @@ const axios = require('axios');
 
 const API_KEY = process.env.EMBEDSOCIAL_API_KEY;
 const ALBUM_REF = '2b7c1281f1c03b9704c1857b382fc1d5ce7a749c';
-const CAL_URL = "https://www.theushuaiaexperience.com/en/club/calendar";
 const OUTPUT_FILE = 'index.html';
 const BATCH_SIZE = 5;
 
@@ -45,7 +44,7 @@ async function generateStaticFeed() {
                    poster="${post.image || ''}"
                    disablepictureinpicture
                  ></video>
-                 <button class="sound-btn" title="Ouvrir le calendrier"></button>`
+                 <button class="sound-btn" title="Activer le son"></button>`
               : `<img src="${post.image}" alt="post" loading="${eager ? 'eager' : 'lazy'}" />`
           }
         </div>
@@ -136,6 +135,10 @@ async function generateStaticFeed() {
       background-repeat:no-repeat; background-position:center; background-size:60%;
     }
 
+    .sound-btn.unmuted {
+      background-image:url('data:image/svg+xml;charset=UTF-8,<svg fill="white" height="24" width="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>');
+    }
+
     .info {
       height: 6px;
       min-height: 6px;
@@ -174,7 +177,6 @@ async function generateStaticFeed() {
   </div>
 
   <script>
-    const CAL_URL = "${CAL_URL}";
     const BATCH_SIZE = ${BATCH_SIZE};
     const remainingPosts = ${postsJSON};
 
@@ -184,16 +186,46 @@ async function generateStaticFeed() {
     let currentIndexLoaded = 0;
     let stageScale = 1;
 
-    function openCalendar() {
-      window.parent.postMessage({
-        type: "OPEN_CALENDAR",
-        url: CAL_URL
-      }, "*");
+    let unmutedVideo = null;
+
+    function setSoundIcon(video, on) {
+      const wrapper = video.closest('.video-wrapper');
+      if (!wrapper) return;
+      const btn = wrapper.querySelector('.sound-btn');
+      if (btn) {
+        btn.classList.toggle('unmuted', !!on);
+        btn.title = on ? "Couper le son" : "Activer le son";
+      }
+    }
+
+    function muteAll() {
+      document.querySelectorAll('video').forEach(v => {
+        v.muted = true;
+        setSoundIcon(v, false);
+      });
+      unmutedVideo = null;
+    }
+
+    function toggleSound(video) {
+      if (!video) return;
+
+      if (!video.muted) {
+        video.muted = true;
+        setSoundIcon(video, false);
+        unmutedVideo = null;
+        return;
+      }
+
+      muteAll();
+      video.muted = false;
+      unmutedVideo = video;
+      setSoundIcon(video, true);
+      tryPlay(video);
     }
 
     function wireUpButtons() {
       document.querySelectorAll("video").forEach(v => {
-        v.muted = true;
+        v.muted = (v !== unmutedVideo);
         v.playsInline = true;
         v.setAttribute("playsinline", "");
         v.setAttribute("webkit-playsinline", "");
@@ -202,7 +234,7 @@ async function generateStaticFeed() {
 
         if (!v.dataset.bound) {
           v.dataset.bound = "1";
-          v.addEventListener("click", openCalendar);
+          v.addEventListener("click", () => toggleSound(v));
         }
 
         if (!v.dataset.measured) {
@@ -224,7 +256,9 @@ async function generateStaticFeed() {
           btn.dataset.bound = "1";
           btn.addEventListener("click", e => {
             e.stopPropagation();
-            openCalendar();
+            const wrapper = btn.closest('.video-wrapper');
+            const v = wrapper && wrapper.querySelector('video');
+            toggleSound(v);
           });
         }
       });
@@ -244,7 +278,7 @@ async function generateStaticFeed() {
               poster="\${post.image || ''}"
               disablepictureinpicture
             ></video>
-            <button class="sound-btn" title="Ouvrir le calendrier"></button>
+            <button class="sound-btn" title="Activer le son"></button>
           </div>\`
         : \`
           <div class="video-wrapper">
@@ -315,7 +349,7 @@ async function generateStaticFeed() {
         video.load();
       }
 
-      video.muted = true;
+      video.muted = (video !== unmutedVideo);
       video.playsInline = true;
       video.setAttribute("playsinline", "");
       video.setAttribute("webkit-playsinline", "");
@@ -344,13 +378,18 @@ async function generateStaticFeed() {
           }
 
           video.pause();
+          if (video === unmutedVideo) unmutedVideo = null;
           video.muted = true;
+          setSoundIcon(video, false);
           video.playsInline = true;
           video.setAttribute("playsinline", "");
           video.setAttribute("webkit-playsinline", "");
           video.setAttribute("preload", "auto");
         } else {
           video.pause();
+          if (video === unmutedVideo) unmutedVideo = null;
+          video.muted = true;
+          setSoundIcon(video, false);
           if (!video.getAttribute("src")) {
             video.setAttribute("preload", "none");
           }
@@ -488,7 +527,7 @@ async function generateStaticFeed() {
       const newVideo = document.createElement('video');
       newVideo.src = newSrc;
       newVideo.autoplay = true;
-      newVideo.muted = true;
+      newVideo.muted = (video !== unmutedVideo);
       newVideo.loop = video.loop !== false;
       newVideo.playsInline = true;
       newVideo.setAttribute("playsinline", "");
@@ -537,7 +576,7 @@ async function generateStaticFeed() {
 
           if (!newVideo.dataset.bound) {
             newVideo.dataset.bound = "1";
-            newVideo.addEventListener("click", openCalendar);
+            newVideo.addEventListener("click", () => toggleSound(newVideo));
           }
 
           if (!newVideo.dataset.measured) {
@@ -548,6 +587,12 @@ async function generateStaticFeed() {
           if (io && !newVideo.dataset.observed) {
             newVideo.dataset.observed = "1";
             io.observe(newVideo);
+          }
+
+          if (unmutedVideo === video) {
+            unmutedVideo = newVideo;
+            newVideo.muted = false;
+            setSoundIcon(newVideo, true);
           }
 
           const vis = VISIBLE.has(video) ? VISIBLE.get(video) : isActuallyVisible(newVideo);
